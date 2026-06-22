@@ -1,0 +1,1265 @@
+openapi: 3.0.0
+info:
+  title: Elasticsearch Proxy API
+  description: A higher-level abstraction for Elasticsearch search operations.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local server
+  - url: https://services.acc.campercontact.com/
+    description: Acceptation server
+  - url: https://services.campercontact.com/
+    description: Production server
+
+paths:
+  /search/nearby:
+    get:
+      summary: Search for locations nearby the given lat/lon
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/xFeatureFlags'
+        - $ref: '#/components/parameters/latParam'
+        - $ref: '#/components/parameters/lonParam'
+        - in: query
+          name: excludedSitecode
+          schema:
+            type: string
+          description: Sitecode to exclude from the response
+      responses:
+        '200':
+          description: Search results returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbyResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
+  /search/popular:
+    get:
+      summary: Search for the most popular locations
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/latParam'
+        - $ref: '#/components/parameters/lonParam'
+        - $ref: '#/components/parameters/topleftLatParam'
+        - $ref: '#/components/parameters/topleftLonParam'
+        - $ref: '#/components/parameters/bottomrightLatParam'
+        - $ref: '#/components/parameters/bottomrightLonParam'
+        - $ref: '#/components/parameters/distance'
+      responses:
+        '200':
+          description: Search results returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationsResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
+  /search/bookable:
+    get:
+      summary: Search for bookable locations
+      description: Returns bookable locations with rating >= 4. Can be filtered by lat/lon coordinates or bounding box.
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/latParam'
+        - $ref: '#/components/parameters/lonParam'
+        - $ref: '#/components/parameters/topleftLatParam'
+        - $ref: '#/components/parameters/topleftLonParam'
+        - $ref: '#/components/parameters/bottomrightLatParam'
+        - $ref: '#/components/parameters/bottomrightLonParam'
+        - $ref: '#/components/parameters/distance'
+      responses:
+        '200':
+          description: Search results returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationsResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
+  /search/suggestions:
+    get:
+      summary: Get search suggestions based on the query
+      description: >
+        Returns POI suggestions from ElasticSearch and geo suggestions (cities, regions, countries) from Photon (OpenStreetMap geocoder), ranked by relevance using Fuse.js.
+        By default, results include locations (POIs), cities, countries and regions.
+        Set includePois to false to exclude POI results. Set includeOsmTypes to true to also include all additional OSM geo types (e.g. tourism, leisure, amenity).
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - in: query
+          name: query
+          required: true
+          schema:
+            type: string
+          description: The search query
+        - $ref: '#/components/parameters/latParam'
+        - $ref: '#/components/parameters/lonParam'
+        - in: query
+          name: includePois
+          schema:
+            type: boolean
+            default: true
+          description: >
+            When true (default), POI results from ElasticSearch are included in the suggestions.
+            When false, only geo suggestions from Photon are returned.
+        - in: query
+          name: includeOsmTypes
+          schema:
+            type: boolean
+            default: false
+          description: >
+            When true, geo results from Photon include all OSM key types (e.g. tourism, leisure, amenity) in addition to cities, countries and regions.
+            When false (default), only cities, countries and regions are returned.
+      responses:
+        '200':
+          description: Suggestions returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionsResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
+
+  /search/suggestions/locations:
+    get:
+      summary: Get location suggestions based on the query
+      description: Returns only POI (location) suggestions for the given query, not cities, regions, or countries.
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - in: query
+          name: query
+          description: The search query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location suggestions returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionLocationResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
+  /search/results/map:
+    get:
+      summary: Search for locations to show on a map
+      tags:
+        - Results
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/xFeatureFlags'
+        - $ref: '#/components/parameters/topleftLatParam'
+        - $ref: '#/components/parameters/topleftLonParam'
+        - $ref: '#/components/parameters/bottomrightLatParam'
+        - $ref: '#/components/parameters/bottomrightLonParam'
+        - $ref: '#/components/parameters/filter.poiType'
+        - $ref: '#/components/parameters/filter.isBookable'
+        - $ref: '#/components/parameters/filter.rating'
+        - $ref: '#/components/parameters/filter.numberOfReviews'
+        - $ref: '#/components/parameters/filter.price'
+        - $ref: '#/components/parameters/filter.fromDate'
+        - $ref: '#/components/parameters/filter.toDate'
+        - $ref: '#/components/parameters/filter.date'
+        - $ref: '#/components/parameters/filter.maxCamperSpots'
+        - $ref: '#/components/parameters/filter.maxCamperLength'
+        - $ref: '#/components/parameters/filter.maxStay'
+        - $ref: '#/components/parameters/filter.surroundings'
+        - $ref: '#/components/parameters/filter.discounts'
+        - $ref: '#/components/parameters/filter.amenities'
+        - $ref: '#/components/parameters/filter.terrain'
+        - $ref: '#/components/parameters/filter.dogsAllowed'
+        - $ref: '#/components/parameters/filter.campingBehaviourAllowed'
+        - $ref: '#/components/parameters/filter.nudityAllowed'
+        - $ref: '#/components/parameters/filter.sitecodes'
+        - $ref: '#/components/parameters/filter.persons'
+        - $ref: '#/components/parameters/filter.babies'
+        - $ref: '#/components/parameters/filter.pets'
+      responses:
+        '200':
+          description: Map search results returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Internal server error
+  /search/results/list:
+    get:
+      summary: Search for locations to show in the list
+      tags:
+        - Results
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/xFeatureFlags'
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/latParam'
+        - $ref: '#/components/parameters/lonParam'
+        - $ref: '#/components/parameters/filter.poiType'
+        - $ref: '#/components/parameters/filter.isBookable'
+        - $ref: '#/components/parameters/filter.rating'
+        - $ref: '#/components/parameters/filter.numberOfReviews'
+        - $ref: '#/components/parameters/filter.price'
+        - $ref: '#/components/parameters/filter.fromDate'
+        - $ref: '#/components/parameters/filter.toDate'
+        - $ref: '#/components/parameters/filter.date'
+        - $ref: '#/components/parameters/filter.maxCamperSpots'
+        - $ref: '#/components/parameters/filter.maxCamperLength'
+        - $ref: '#/components/parameters/filter.maxStay'
+        - $ref: '#/components/parameters/filter.surroundings'
+        - $ref: '#/components/parameters/filter.discounts'
+        - $ref: '#/components/parameters/filter.amenities'
+        - $ref: '#/components/parameters/filter.terrain'
+        - $ref: '#/components/parameters/filter.dogsAllowed'
+        - $ref: '#/components/parameters/filter.campingBehaviourAllowed'
+        - $ref: '#/components/parameters/filter.nudityAllowed'
+        - $ref: '#/components/parameters/filter.sitecodes'
+        - $ref: '#/components/parameters/filter.persons'
+        - $ref: '#/components/parameters/filter.babies'
+        - $ref: '#/components/parameters/filter.pets'
+        - $ref: '#/components/parameters/sort.by'
+        - $ref: '#/components/parameters/sort.order'
+        - $ref: '#/components/parameters/sort.sortLocationLat'
+        - $ref: '#/components/parameters/sort.sortLocationLon'
+        - $ref: '#/components/parameters/distance'
+      responses:
+        '200':
+          description: Map search results returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '501':
+          description: Not Implemented
+  /search/results/preview:
+    get:
+      summary: Get a location preview by ID, sitecode, or coordinates
+      description: >
+        Returns a preview for a location. Supports two modes:
+
+        **POI mode** (poi_id or sitecode): Returns a detailed location from ElasticSearch with price range information.
+
+        **Geo-location mode** (lat + lon): Performs a reverse geocode using Nominatim to resolve the
+        city, region, and country for the given coordinates, with translations in 6 languages
+        (nl, en, fr, es, de, it). Uses a 3-step process:
+        1. Reverse geocode (lat/lon → place_id)
+        2. Details lookup (place_id → address hierarchy with OSM IDs for admin levels 3/4/5/8/10)
+        3. Batch lookup (OSM IDs → multilingual name translations)
+
+        The root-level city, region, and country fields are resolved using the Accept-Language header.
+      tags:
+        - Results
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - in: query
+          name: poi_id
+          schema:
+            type: string
+          description: The poiId of the location to preview
+        - in: query
+          name: sitecode
+          schema:
+            type: string
+          description: The sitecode of the location to preview
+        - in: query
+          name: lat
+          schema:
+            type: number
+          description: Latitude for geo-location preview (must be provided together with lon)
+        - in: query
+          name: lon
+          schema:
+            type: number
+          description: Longitude for geo-location preview (must be provided together with lat)
+      responses:
+        '200':
+          description: Preview returned successfully. Response schema depends on the mode used.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PreviewResponse'
+                  - $ref: '#/components/schemas/GeoLocationPreviewResponse'
+        '400':
+          description: Invalid input - either poi_id, sitecode, or both lat and lon must be provided
+        '404':
+          description: Location not found (POI mode only)
+
+  /search/destination:
+    get:
+      summary: Get destination by slug
+      description: Returns a destination with location, bounding box, or country filter information
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - name: slug
+          in: query
+          required: true
+          description: The destination slug
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Destination returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DestinationResponse'
+        '400':
+          description: Invalid input
+        '404':
+          description: Destination not found
+        '500':
+          description: Server error
+
+  /search/address/details:
+    get:
+      summary: Get address details by Google Place ID
+      description: Returns detailed information about a specific place using Google Places API
+      tags:
+        - Address
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - name: placeId
+          in: query
+          required: true
+          description: The Google Places API place ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Address details returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressDetailsResponse'
+        '400':
+          description: Invalid input - placeId is required
+        '500':
+          description: Server error
+
+  /search/address/geocode:
+    get:
+      summary: Reverse geocode coordinates to address
+      description: Convert latitude and longitude coordinates to address information using Google Geocoding API
+      tags:
+        - Address
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - name: lat
+          in: query
+          required: true
+          description: Latitude coordinate
+          schema:
+            type: string
+        - name: lng
+          in: query
+          required: true
+          description: Longitude coordinate
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Geocoding results returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressGeocodeResponse'
+        '400':
+          description: Invalid input - lat and lng are required
+        '500':
+          description: Server error
+
+  /search/address/suggestions:
+    get:
+      summary: Get address suggestions based on input
+      description: Returns address autocomplete suggestions using Google Places Autocomplete API
+      tags:
+        - Address
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - name: input
+          in: query
+          required: true
+          description: The search input text for address suggestions
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Address suggestions returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressSuggestionsResponse'
+        '400':
+          description: Invalid input - input is required
+        '500':
+          description: Server error
+
+components:
+  parameters:
+    acceptLanguage:
+      name: accept-language
+      in: header
+      description: The language to return the results in
+      required: false
+      schema:
+        type: string
+        default: en-US
+    xFeatureFlags:
+      name: x-feature-flags
+      in: header
+      description: The feature flags to enable
+      required: false
+      schema:
+        type: string
+        enum: [microcamping]
+    offset:
+      name: offset
+      in: query
+      description: The offset of the results
+      schema:
+        type: integer
+        default: 0
+    limit:
+      name: limit
+      in: query
+      description: The limit of the results
+      schema:
+        type: integer
+        default: 10
+    latParam:
+      name: lat
+      in: query
+      description: Latitude of the center point
+      schema:
+        type: number
+    lonParam:
+      name: lon
+      in: query
+      description: Longitude of the center point
+      schema:
+        type: number
+    topleftLatParam:
+      name: topleft_lat
+      in: query
+      description: Bounding box - top left latitude
+      schema:
+        type: number
+    topleftLonParam:
+      name: topleft_lon
+      in: query
+      description: Bounding box - top left longitude
+      schema:
+        type: number
+    bottomrightLatParam:
+      name: bottomright_lat
+      in: query
+      description: Bounding box - bottom right latitude
+      schema:
+        type: number
+    bottomrightLonParam:
+      name: bottomright_lon
+      in: query
+      description: Bounding box - bottom right longitude
+      schema:
+        type: number
+    filter.poiType:
+      name: poiType
+      in: query
+      description: Filter by one or more poiTypes (comma-separated). Defaults to all types when omitted.
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum: [camping, camperplace, serviceplace, microcamping]
+    filter.isBookable:
+      name: isBookable
+      in: query
+      description: Filter on bookable locations
+      schema:
+        type: boolean
+    filter.rating:
+      name: rating
+      in: query
+      description: Filter on minimal rating
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 5
+    filter.numberOfReviews:
+      name: numberOfReviews
+      in: query
+      description: Filter on minimal number of reviews
+      schema:
+        type: number
+    filter.price:
+      name: price
+      in: query
+      description: Filter on a price range (min-max)
+      schema:
+        type: string
+    filter.fromDate:
+      name: fromDate
+      in: query
+      description: Check-in date for availability filtering. Must use ISO format `YYYY-MM-DD`.
+      schema:
+        type: string
+        format: date
+    filter.toDate:
+      name: toDate
+      in: query
+      description: Check-out date for availability filtering. Must use ISO format `YYYY-MM-DD` and be after `fromDate`.
+      schema:
+        type: string
+        format: date
+    filter.date:
+      name: date
+      in: query
+      deprecated: true
+      description: Deprecated. Use the separate `fromDate` and `toDate` query parameters instead.
+      example: '{"fromDate":"2026-07-10","toDate":"2026-07-12"}'
+      schema:
+        type: string
+    filter.maxCamperSpots:
+      name: maxCamperSpots
+      in: query
+      description: Filter on a maxCamperSpots range (min-max)
+      schema:
+        type: string
+    filter.maxCamperLength:
+      name: maxCamperLength
+      in: query
+      description: Filter on a maxCamperLength
+      schema:
+        type: number
+    filter.maxStay:
+      name: maxStay
+      in: query
+      description: Filter on maximum stay duration
+      schema:
+        type: string
+        enum: [unlimited, twoToSixDays, oneDay, forbidden]
+    filter.surroundings:
+      name: surroundings
+      in: query
+      description: Filter on surroundings, array with values ["byTheWater", "inTheMountains"]
+      schema:
+        type: array
+        items:
+          type: string
+    filter.discounts:
+      name: discounts
+      in: query
+      description: Filter on discount cards, array with values ["acsi", "cci"]
+      schema:
+        type: array
+        items:
+          type: string
+    filter.amenities:
+      name: amenities
+      in: query
+      description: Filter on amenities, array with values ["water", "electricity"]
+      schema:
+        type: array
+        items:
+          type: string
+    filter.terrain:
+      name: terrain
+      in: query
+      description: Filter on terrain, array with values ["grass", "atARestaurant"]
+      schema:
+        type: array
+        items:
+          type: string
+    filter.dogsAllowed:
+      name: dogsAllowed
+      in: query
+      description: Filter on locations where dogs are allowed
+      schema:
+        type: boolean
+    filter.campingBehaviourAllowed:
+      name: campingBehaviourAllowed
+      in: query
+      description: Filter on locations where camping behaviour is allowed
+      schema:
+        type: boolean
+    filter.nudityAllowed:
+      name: nudityAllowed
+      in: query
+      description: Filter on locations where nudity is allowed
+      schema:
+        type: boolean
+    filter.sitecodes:
+      name: sitecodes
+      in: query
+      description: Filter by a list of sitecodes
+      schema:
+        type: array
+        items:
+          type: integer
+    filter.persons:
+      name: persons
+      in: query
+      description: Number of adults for Travelbase availability filtering. Only used when isBookable is true.
+      schema:
+        type: integer
+        minimum: 1
+        default: 2
+    filter.babies:
+      name: babies
+      in: query
+      description: Number of babies for Travelbase availability filtering. Only used when isBookable is true.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    filter.pets:
+      name: pets
+      in: query
+      description: Number of pets for Travelbase availability filtering. Only used when isBookable is true.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    sort.by:
+      name: sortBy
+      in: query
+      description: The type of sorting to apply
+      required: false
+      schema:
+        type: string
+        enum: [relevance, distance, price, rating, created]
+    sort.order:
+      name: sortOrder
+      in: query
+      description: The order to sort by
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+    sort.sortLocationLat:
+      name: sortLocationLat
+      in: query
+      description: The latitude of the location to sort for distance. If sortLocationLat and sortLocationLon is present, distance sort is added.
+      schema:
+        type: number
+    sort.sortLocationLon:
+      name: sortLocationLon
+      in: query
+      description: The longitude of the location to sort for distance. If sortLocationLat and sortLocationLon is present, distance sort is added.
+      schema:
+        type: number
+    distance:
+      name: distance
+      in: query
+      description: Distance filter in the format '123km', defaults to 10000km
+      schema:
+        type: string
+        pattern: '^\\d+km$'
+  schemas:
+    LatLng:
+      type: object
+      required:
+        - lat
+        - lon
+      properties:
+        lat:
+          type: number
+          description: Latitude coordinate
+          example: 52.370216
+        lon:
+          type: number
+          description: Longitude coordinate
+          example: 4.895168
+
+    PriceRange:
+      type: object
+      description: Price range based on the active price for the current date. The price range is determined by finding the active price entry (based on dateFrom and dateTo) and mapping it to a predefined range.
+      properties:
+        min:
+          type: number
+          nullable: true
+          description: Minimum price in EUR for the range. Null if no active price is found.
+          example: 25
+        max:
+          type: number
+          nullable: true
+          description: Maximum price in EUR for the range. Null for prices >= 100 EUR or if no active price is found.
+          example: 35
+
+    PriceBreakdown:
+      type: object
+      description: >
+        Price breakdown for TravelBase bookable locations. Only present when a realtime TravelBase price is available.
+        Contains the price with the TravelBase booking fee (EUR 2.50) subtracted.
+      properties:
+        fee:
+          type: number
+          description: The TravelBase booking fee in EUR that was subtracted from the total price.
+          example: 2.5
+        totalPrice:
+          type: number
+          description: Total price in EUR with the booking fee subtracted (price - fee).
+          example: 126.5
+        pricePerNight:
+          type: number
+          description: Price per night in EUR with the booking fee subtracted (totalPrice / nights).
+          example: 42.17
+
+    LocationDetailed:
+      type: object
+      required:
+        - id
+        - type
+        - sitecode
+        - filters
+        - permalink
+        - translatedPermalinks
+        - title
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        location:
+          $ref: '#/components/schemas/LatLng'
+        sitecode:
+          type: integer
+        subtitle:
+          type: string
+        permalink:
+          type: string
+        translatedPermalinks:
+          type: array
+          items:
+            type: object
+            properties:
+              locale:
+                type: string
+              permalink:
+                type: string
+        thumbnail:
+          type: string
+        filters:
+          type: object
+          required:
+            - rating
+            - numberOfReviews
+            - maxCamperSpots
+            - isBookable
+            - prices
+          properties:
+            rating:
+              type: integer
+            numberOfReviews:
+              type: integer
+            maxCamperSpots:
+              type: integer
+            poiType:
+              type: string
+            price:
+              type: number
+              description: Current active price in EUR (coming from Travelbase)
+            prices:
+              type: array
+              items:
+                type: object
+                properties:
+                  dateFrom:
+                    type: string
+                    format: date
+                  dateTo:
+                    type: string
+                    format: date
+                  price:
+                    type: number
+                  discount:
+                    type: boolean
+                  priceRange:
+                    $ref: '#/components/schemas/PriceRange'
+                    description: Price range for this specific price entry (only included in preview results)
+            isBookable:
+              type: boolean
+            isClaimed:
+              type: boolean
+        priceRange:
+          $ref: '#/components/schemas/PriceRange'
+        price:
+          type: number
+          description: Realtime total price from TravelBase (includes the TravelBase booking fee).
+        priceBreakdown:
+          $ref: '#/components/schemas/PriceBreakdown'
+        metaData:
+          type: object
+          properties:
+            distance:
+              type: number
+              description: When searching for locations within lat/lon, the distance in meters of every location from the lat/lon that is searched from.
+
+    LocationMapHolder:
+      type: object
+      properties:
+        clusters:
+          type: array
+          description: The clusters to render on the map. A cluster is a collection of location represented as one entity, a cluster. Contains the center location and the number of locations in the cluster.
+          items:
+            $ref: '#/components/schemas/LocationMapCluster'
+        markers:
+          type: array
+          description: The individual locations to render on the map
+          items:
+            $ref: '#/components/schemas/LocationMapMarker'
+    LocationMapCluster:
+      type: object
+      required:
+        - id
+        - count
+        - center
+      properties:
+        id:
+          type: string
+          description: 'Unique id of the cluster'
+        total:
+          type: number
+        center:
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+    LocationMapMarker:
+      type: object
+      required:
+        - id
+        - type
+        - location
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        location:
+          $ref: '#/components/schemas/LatLng'
+        isBookable:
+          type: boolean
+        isClaimed:
+          type: boolean
+        sitecode:
+          type: integer
+        subscriptionLevel:
+          type: integer
+
+    LocationsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/LocationDetailed'
+
+    NearbyResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/LocationDetailed'
+
+    SuggestionsResponse:
+      type: array
+      items:
+        oneOf:
+          - $ref: '#/components/schemas/PoiSuggestion'
+          - $ref: '#/components/schemas/PlaceSuggestion'
+    
+    SuggestionLocationResponse:
+      type: array
+      description: Array of location suggestions (POIs) for the /search/suggestions/locations endpoint.
+      items:
+        type: object
+        required:
+          - id
+          - status
+          - title
+          - subtitle
+          - sitecode
+          - type
+        properties:
+          id:
+            type: string
+          status:
+            type: string
+          title:
+            type: string
+          subtitle:
+            type: string
+          thumbnail:
+            type: string
+            description: URL to the thumbnail image
+          sitecode:
+            type: integer
+          type:
+            type: string
+            enum: [camping, camperplace, serviceplace, microcamping]
+          rating:
+            type: integer
+            description: Average rating of the location
+          numberOfReviews:
+            type: integer
+            description: Number of reviews for the location
+            
+    MapResponse:
+      type: object
+      $ref: '#/components/schemas/LocationMapHolder'
+
+    ListResponse:
+      type: object
+      properties:
+        total:
+          type: object
+          properties:
+            value:
+              type: integer
+            relation:
+              type: string
+              enum: [eq, gte]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationDetailed'
+
+    PreviewResponse:
+      type: object
+      $ref: '#/components/schemas/LocationDetailed'
+    PoiSuggestion:
+      type: object
+      description: A POI (location) suggestion from ElasticSearch
+      required:
+        - id
+        - title
+        - subtitle
+        - location
+        - permalink
+        - sitecode
+        - type
+      properties:
+        id:
+          type: string
+        osmId:
+          type: integer
+          nullable: true
+          description: Always null for POI suggestions
+        title:
+          type: string
+        subtitle:
+          type: string
+        location:
+          $ref: '#/components/schemas/LatLng'
+        permalink:
+          type: string
+        sitecode:
+          type: integer
+        type:
+          type: string
+          enum: [camping, camperplace, serviceplace]
+    PlaceSuggestion:
+      type: object
+      description: A geo suggestion from Photon (OpenStreetMap geocoder). By default cities, regions and countries are returned. Additional types can be included via the includeOsmTypes parameter.
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+          description: Prefixed OSM identifier (e.g. "osm-12345")
+        osmId:
+          type: integer
+          description: OpenStreetMap ID of the feature
+        name:
+          type: string
+        altNames:
+          type: array
+          items:
+            type: string
+        subtitle:
+          type: string
+          description: Contextual subtitle (e.g. state name, or city + state for POI-type results)
+        countryCode:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        municipality:
+          type: string
+        state:
+          type: string
+        permalink:
+          type: string
+        location:
+          $ref: '#/components/schemas/LatLng'
+        boundingBox:
+          $ref: '#/components/schemas/BoundingBox'
+          nullable: true
+        type:
+          type: string
+          description: >
+            The type of place. Standard types are city, region, country and municipality.
+            When includeOsmTypes is true, additional types may appear based on the OSM osm_value (e.g. "camp_site", "caravan_site", "hotel").
+          enum: [city, region, country, municipality]
+
+    BoundingBox:
+      type: object
+      required:
+        - top_left
+        - bottom_right
+      properties:
+        top_left:
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+        bottom_right:
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+
+    DestinationResponse:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [city, region, country]
+          description: Type of destination
+        lat:
+          type: number
+          description: Latitude coordinate (if applicable)
+        lon:
+          type: number
+          description: Longitude coordinate (if applicable)
+        countryId:
+          type: string
+          description: Country identifier (if applicable)
+        boundingBox:
+          $ref: '#/components/schemas/BoundingBox'
+        zoom:
+          type: number
+          description: Suggested zoom level for the map
+
+    AddressSuggestionsResponse:
+      type: object
+      description: Google Places Autocomplete API response
+      properties:
+        predictions:
+          type: array
+          description: Array of QueryAutocompletePrediction objects from Google Places API
+          items:
+            $ref: '#/components/schemas/QueryAutocompletePrediction'
+
+    QueryAutocompletePrediction:
+      type: object
+      description: A single place prediction from Google Places Autocomplete API
+      required:
+        - description
+        - place_id
+      properties:
+        description:
+          type: string
+          description: Human-readable name for the returned result
+          example: "Paris, France"
+        place_id:
+          type: string
+          description: Unique identifier for a place
+          example: "ChIJD7fiBh9u5kcRYJSMaMOCCwQ"
+        reference:
+          type: string
+          description: Deprecated, use place_id instead
+        matched_substrings:
+          type: array
+          description: Substrings that match elements in the input
+          items:
+            type: object
+            properties:
+              length:
+                type: integer
+              offset:
+                type: integer
+        structured_formatting:
+          type: object
+          description: Provides pre-formatted text that can be shown in your autocomplete results
+          properties:
+            main_text:
+              type: string
+              description: Main text of a prediction, usually the name of the place
+            main_text_matched_substrings:
+              type: array
+              items:
+                type: object
+                properties:
+                  length:
+                    type: integer
+                  offset:
+                    type: integer
+            secondary_text:
+              type: string
+              description: Secondary text of a prediction, usually the location of the place
+        terms:
+          type: array
+          description: Array containing each section of the returned description
+          items:
+            type: object
+            properties:
+              offset:
+                type: integer
+              value:
+                type: string
+        types:
+          type: array
+          description: Array of types that apply to this place
+          items:
+            type: string
+          example: ["locality", "political"]
+
+    AddressDetailsResponse:
+      type: object
+      description: Simplified response containing only location coordinates extracted from Google Places API
+      required:
+        - lat
+        - lng
+      properties:
+        lat:
+          type: number
+          description: Latitude coordinate of the place
+          example: 52.370216
+        lng:
+          type: number
+          description: Longitude coordinate of the place
+          example: 4.895168
+
+    GeoLocationPreviewResponse:
+      type: object
+      description: >
+        Response for geo-location preview (lat/lon mode). Contains the localized city, region, and country
+        based on the Accept-Language header, plus a translations array with all 6 supported languages.
+      required:
+        - city
+        - region
+        - country
+        - countryCode
+        - translations
+      properties:
+        city:
+          type: string
+          description: City name in the requested locale
+          example: "Amsterdam"
+        region:
+          type: string
+          description: Region/province/state name in the requested locale
+          example: "North Holland"
+        country:
+          type: string
+          description: Country name in the requested locale
+          example: "Netherlands"
+        countryCode:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          example: "NL"
+        translations:
+          type: array
+          description: Translations for each administrative level in all 6 supported languages
+          items:
+            $ref: '#/components/schemas/GeoLocationTranslation'
+
+    GeoLocationTranslation:
+      type: object
+      required:
+        - type
+        - osmId
+        - translations
+      properties:
+        type:
+          type: string
+          enum: [country, region, city]
+          description: The administrative level type
+        osmId:
+          type: integer
+          description: OpenStreetMap relation ID
+          example: 47796
+        translations:
+          type: object
+          description: Name translations keyed by language code
+          required:
+            - nl
+            - en
+            - fr
+            - es
+            - de
+            - it
+          properties:
+            nl:
+              type: string
+              example: "Nederland"
+            en:
+              type: string
+              example: "Netherlands"
+            fr:
+              type: string
+              example: "Pays-Bas"
+            es:
+              type: string
+              example: "Países Bajos"
+            de:
+              type: string
+              example: "Niederlande"
+            it:
+              type: string
+              example: "Paesi Bassi"
+
+    AddressGeocodeResponse:
+      type: object
+      description: Structured address information extracted from Google Geocoding API
+      properties:
+        street:
+          type: string
+          description: Street name
+          example: "Damrak"
+        houseNumber:
+          type: string
+          description: House number
+          example: "1"
+        city:
+          type: string
+          description: City name (derived from postal_town, locality, or administrative_area_level_3)
+          example: "Amsterdam"
+        postalCode:
+          type: string
+          description: Postal code
+          example: "1012 LG"
+        country:
+          type: string
+          description: Country name
+          example: "Netherlands"
+        countryCode:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          example: "NL"

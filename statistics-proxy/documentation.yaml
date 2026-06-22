@@ -1,0 +1,434 @@
+openapi: 3.0.1
+info:
+  title: Camper Contact Statistics API
+  description: >
+    B2B statistics dashboard API. Aggregates data from Techonomy, Elasticsearch, and Common API.
+    All endpoints require a valid JWT Bearer token. Authorization is enforced per location and statistic type
+    via the Common API.
+  version: 2.0.0
+servers:
+  - url: https://services.acc.campercontact.com
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    sitecode:
+      name: sitecode
+      in: query
+      required: true
+      description: Unique identifier for the site/location.
+      schema:
+        type: string
+    year:
+      name: year
+      in: query
+      required: true
+      description: The year to retrieve data for.
+      schema:
+        type: integer
+        example: 2025
+
+  responses:
+    BadRequest:
+      description: Invalid request due to missing or invalid parameters.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    Forbidden:
+      description: User is not allowed to view this statistic for the given location.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: You are not allowed to view this data
+    InternalError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: An unknown error occurred
+
+paths:
+  /statistics/yearly-page-views-comparison:
+    get:
+      summary: Get Yearly Page Views Comparison
+      description: >
+        Fetches monthly page view totals for a location, compared across the most recent 3 years.
+        Data is sourced from the Techonomy interaction_statistics_monthly API.
+      parameters:
+        - $ref: '#/components/parameters/sitecode'
+      responses:
+        '200':
+          description: Successful response with yearly page views data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: One entry per month (1–12) with page view counts per year.
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                          description: Month number (1–12).
+                          example: 1
+                      additionalProperties:
+                        type: integer
+                        description: Page views for a given year (key is the year as integer).
+                      example:
+                        month: 1
+                        2024: 240
+                        2025: 310
+                        2026: 150
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        description: Year labels as strings.
+                        items:
+                          type: string
+                        example: ["2024", "2025", "2026"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /statistics/location-clicks-summary:
+    get:
+      summary: Get Location Clicks Summary
+      description: >
+        Fetches the total count of each click type (web, email, phone, navigation) for a location in a given year.
+        Data is sourced from the Techonomy interaction_statistics_monthly API.
+      parameters:
+        - $ref: '#/components/parameters/sitecode'
+        - $ref: '#/components/parameters/year'
+      responses:
+        '200':
+          description: Successful response with location clicks totals.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Total click counts by type.
+                    items:
+                      type: object
+                      properties:
+                        click:
+                          type: string
+                          description: Type of click.
+                          enum: [web, email, phone, navigation]
+                          example: web
+                        total:
+                          type: integer
+                          description: Total number of clicks for this type.
+                          example: 1988
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        example: [web, email, phone, navigation]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /statistics/location-clicks-overview:
+    get:
+      summary: Get Location Clicks Overview
+      description: >
+        Fetches monthly breakdown of click types (web, email, phone, navigation) for a location in a given year.
+        Data is sourced from the Techonomy interaction_statistics_monthly API.
+      parameters:
+        - $ref: '#/components/parameters/sitecode'
+        - $ref: '#/components/parameters/year'
+      responses:
+        '200':
+          description: Successful response with monthly click breakdown.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: One entry per month (1–12) with click counts per type.
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                          description: Month number (1–12).
+                          example: 1
+                        web:
+                          type: integer
+                          description: Website clickout count.
+                          example: 120
+                        email:
+                          type: integer
+                          description: Email contact click count.
+                          example: 45
+                        phone:
+                          type: integer
+                          description: Phone contact click count.
+                          example: 30
+                        navigation:
+                          type: integer
+                          description: Route navigation count.
+                          example: 80
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        example: [web, email, phone, navigation]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /statistics/rating-overview:
+    get:
+      summary: Get Rating Overview
+      description: >
+        Fetches the review count per star rating (1–5) for a location.
+        Data is sourced from the Common API reviews endpoint.
+      parameters:
+        - $ref: '#/components/parameters/sitecode'
+      responses:
+        '200':
+          description: Successful response with rating distribution.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Review count per star rating, ordered 5 to 1.
+                    items:
+                      type: object
+                      properties:
+                        rating:
+                          type: string
+                          description: Star rating value.
+                          example: "5"
+                        count:
+                          type: integer
+                          description: Number of reviews with this rating.
+                          example: 42
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        example: ["5", "4", "3", "2", "1"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /statistics/yearly-rating-comparison:
+    get:
+      summary: Get Yearly Rating Comparison
+      description: >
+        Fetches monthly average rating for a location, compared across the most recent 3 years.
+        Data is sourced from the Techonomy rating_statistics_monthly API.
+      parameters:
+        - $ref: '#/components/parameters/sitecode'
+      responses:
+        '200':
+          description: Successful response with yearly rating comparison.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: One entry per month (1–12) with average rating per year.
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                          description: Month number (1–12).
+                          example: 1
+                      additionalProperties:
+                        type: number
+                        description: Average rating for a given year (key is the year as integer).
+                      example:
+                        month: 1
+                        2024: 4.2
+                        2025: 3.8
+                        2026: 4.5
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        example: ["2024", "2025", "2026"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /statistics/yearly-total-reviews-comparison:
+    get:
+      summary: Get Yearly Total Reviews Comparison
+      description: >
+        Fetches monthly total review count for a location, compared across the most recent 3 years.
+        Data is sourced from the Techonomy rating_statistics_monthly API.
+      parameters:
+        - $ref: '#/components/parameters/sitecode'
+      responses:
+        '200':
+          description: Successful response with yearly total reviews comparison.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: One entry per month (1–12) with review count per year.
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                          description: Month number (1–12).
+                          example: 1
+                      additionalProperties:
+                        type: integer
+                        description: Review count for a given year (key is the year as integer).
+                      example:
+                        month: 1
+                        2024: 12
+                        2025: 18
+                        2026: 7
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        example: ["2024", "2025", "2026"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /statistics/monthly-rating-overview:
+    get:
+      summary: Get Monthly Rating Overview
+      description: >
+        Fetches per-month, per-star rating distribution for a location in a given year.
+        Data is sourced from Elasticsearch (poi-reviews-nl index).
+      parameters:
+        - name: poiId
+          in: query
+          required: true
+          description: The POI (point of interest) identifier.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/year'
+      responses:
+        '200':
+          description: Successful response with monthly rating breakdown.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: One entry per month (1–12) with review count per star rating.
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: integer
+                          description: Month number (1–12).
+                          example: 1
+                        "1":
+                          type: integer
+                          description: Number of 1-star reviews.
+                          example: 0
+                        "2":
+                          type: integer
+                          description: Number of 2-star reviews.
+                          example: 1
+                        "3":
+                          type: integer
+                          description: Number of 3-star reviews.
+                          example: 3
+                        "4":
+                          type: integer
+                          description: Number of 4-star reviews.
+                          example: 8
+                        "5":
+                          type: integer
+                          description: Number of 5-star reviews.
+                          example: 15
+                  metaData:
+                    type: object
+                    properties:
+                      labels:
+                        type: array
+                        items:
+                          type: string
+                        example: ["1", "2", "3", "4", "5"]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'

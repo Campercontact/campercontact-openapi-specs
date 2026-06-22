@@ -1,0 +1,392 @@
+openapi: 3.0.3
+info:
+  title: Journey Search API
+  description: Search and filter user journeys stored in Elasticsearch.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local server
+  - url: https://services.acc.campercontact.com/
+    description: Acceptation server
+  - url: https://services.campercontact.com/
+    description: Production server
+paths:
+  /search:
+    get:
+      summary: Search journeys
+      description: |
+        Returns journeys from the `journeys` Elasticsearch alias.
+
+        By default, only public journeys are returned. All filters (tags, countries,
+        distance, duration) are combined with AND logic.
+
+        When `journeyIds` is provided, only those specific journeys are returned
+        regardless of visibility (public or private) and all other filters are ignored.
+        This is intended for fetching a user's own journeys.
+      parameters:
+        - name: Accept-Language
+          in: header
+          description: |
+            Preferred language for translated fields (e.g. `countries`).
+            Supported: `en`, `fr`, `nl`, `de`, `it`, `es`. Defaults to `en`.
+          required: false
+          schema:
+            type: string
+          example: "nl"
+
+        - name: journeyIds
+          in: query
+          description: |
+            Comma-separated list of journey document IDs.
+            When provided, returns exactly those journeys (public and private),
+            ignoring all other filters.
+          required: false
+          schema:
+            type: string
+          example: "abc-123,def-456"
+
+        - name: tags
+          in: query
+          description: |
+            Comma-separated list of tag identifiers.
+            Values are lowercased automatically.
+            Matches journeys that have any of the specified tags.
+          required: false
+          schema:
+            type: string
+          example: "nature-and-outdoors,budget-friendly"
+
+        - name: countries
+          in: query
+          description: |
+            Comma-separated list of ISO 2-letter country codes (e.g. "NL,DE,FR").
+            Values are returned by the `topCountries` response field and can be
+            passed back to filter.
+          required: false
+          schema:
+            type: string
+          example: "France,Germany"
+
+        - name: distanceMin
+          in: query
+          description: Minimum total distance in kilometers.
+          required: false
+          schema:
+            type: number
+          example: 250
+
+        - name: distanceMax
+          in: query
+          description: Maximum total distance in kilometers.
+          required: false
+          schema:
+            type: number
+          example: 750
+
+        - name: durationMin
+          in: query
+          description: Minimum total duration in nights.
+          required: false
+          schema:
+            type: integer
+          example: 3
+
+        - name: durationMax
+          in: query
+          description: Maximum total duration in nights.
+          required: false
+          schema:
+            type: integer
+          example: 14
+
+        - name: lat
+          in: query
+          description: |
+            User's latitude. Must be provided together with `lon` and
+            `maxDistanceFromStartingPoint` to filter journeys by proximity
+            to the starting point.
+          required: false
+          schema:
+            type: number
+          example: 52.3676
+
+        - name: lon
+          in: query
+          description: |
+            User's longitude. Must be provided together with `lat` and
+            `maxDistanceFromStartingPoint` to filter journeys by proximity
+            to the starting point.
+          required: false
+          schema:
+            type: number
+          example: 4.9041
+
+        - name: maxDistanceFromStartingPoint
+          in: query
+          description: |
+            Maximum distance in kilometers from the user's position (`lat`/`lon`)
+            to the journey's starting point. Only journeys whose starting point
+            falls within this radius are returned.
+            Requires `lat` and `lon` to be provided.
+          required: false
+          schema:
+            type: number
+          example: 50
+
+        - name: isFeatured
+          in: query
+          description: |
+            Filter journeys by featured status.
+            When provided, all other filters (tags, countries, distance, duration, sortBy)
+            are ignored and only `isFeatured` + `isPublic` filtering is applied.
+            Results are sorted by relevance (total reactions, then creation date).
+            When omitted, no filtering on featured status is applied.
+          required: false
+          schema:
+            type: boolean
+          example: true
+
+        - name: sortBy
+          in: query
+          description: |
+            Sort order for results. Defaults to `relevance`.
+            - `relevance`: scores journeys by total reactions (views and other signals will be added in the future).
+              Uses `createdAt` descending as a tiebreaker.
+            - `newest`: sorts by creation date descending.
+          required: false
+          schema:
+            type: string
+            enum: [relevance, newest]
+            default: relevance
+          example: newest
+
+        - name: limit
+          in: query
+          description: |
+            Page size — maximum number of journeys to return.
+            Defaults to `250` (preserves the previous behavior for older
+            clients that don't paginate). New clients should pass an explicit
+            `limit` (e.g. `20`) to enable pagination.
+            Use together with `offset` to paginate (e.g. infinite scroll).
+            Validated even when `journeyIds` is provided, but has no effect
+            on the result in that case.
+            Note: `offset + limit` must not exceed `10000` (Elasticsearch
+            default `max_result_window`); requests that exceed this return 400.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+            default: 250
+          example: 20
+
+        - name: offset
+          in: query
+          description: |
+            Number of results to skip from the start. Use together with `limit`
+            to fetch the next page (e.g. `offset=20&limit=20` for the second page).
+            Validated even when `journeyIds` is provided, but has no effect
+            on the result in that case.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 20
+
+      responses:
+        "200":
+          description: Successful search response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JourneySearchResponse"
+        "500":
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Internal server error"
+
+components:
+  schemas:
+    JourneySearchResponse:
+      type: object
+      required: [total, journeys]
+      properties:
+        total:
+          type: integer
+          description: Total number of matching journeys.
+        journeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JourneyHit"
+
+    JourneyHit:
+      type: object
+      required:
+        - id
+        - name
+        - permalink
+        - userId
+        - isPublic
+        - isFeatured
+        - totalNights
+        - countries
+        - numberOfDestinations
+        - createdAt
+        - modifiedAt
+        - tags
+        - destinations
+        - author
+        - reactions
+        - stats
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        permalink:
+          type: string
+        userId:
+          type: string
+        isPublic:
+          type: boolean
+        isFeatured:
+          type: boolean
+        coverPhotoUrl:
+          type: string
+        totalNights:
+          type: integer
+        totalDistanceKm:
+          type: number
+        totalDurationMinutes:
+          type: number
+        startCountry:
+          type: string
+        startingPoint:
+          $ref: "#/components/schemas/GeoPoint"
+        routePhotoUrl:
+          type: string
+        countries:
+          type: array
+          items:
+            type: string
+          description: |
+            Country names translated to the locale from the `Accept-Language` header.
+            Falls back to English, then to the first available translation.
+          example: ["Germany", "France"]
+        countryCodes:
+          type: array
+          items:
+            type: string
+          description: ISO 2-letter country codes associated with the journey.
+          example: ["DE", "FR"]
+        numberOfDestinations:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        modifiedAt:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/JourneyTag"
+        destinations:
+          type: array
+          items:
+            $ref: "#/components/schemas/JourneyDestination"
+        author:
+          $ref: "#/components/schemas/JourneyAuthor"
+        reactions:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Map of reaction type to count.
+        stats:
+          $ref: "#/components/schemas/JourneyStats"
+
+    JourneyStats:
+      type: object
+      required:
+        [totalReactions, totalFavorites, cool, super, awesome, fun, traveling]
+      properties:
+        totalReactions:
+          type: integer
+        totalFavorites:
+          type: integer
+        cool:
+          type: integer
+        super:
+          type: integer
+        awesome:
+          type: integer
+        fun:
+          type: integer
+        traveling:
+          type: integer
+
+    JourneyTag:
+      type: object
+      required: [id, identifier, names]
+      properties:
+        id:
+          type: string
+        identifier:
+          type: string
+        names:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of locale code to translated tag name.
+
+    JourneyDestination:
+      type: object
+      required: [id, locationId, order, nights]
+      properties:
+        id:
+          type: string
+        locationId:
+          type: string
+        locationName:
+          type: string
+        locationCity:
+          type: string
+        locationCountry:
+          type: string
+        order:
+          type: integer
+        nights:
+          type: integer
+
+    GeoPoint:
+      type: object
+      required: [lat, lon]
+      properties:
+        lat:
+          type: number
+          description: Latitude.
+        lon:
+          type: number
+          description: Longitude.
+
+    JourneyAuthor:
+      type: object
+      required: [id, firstName]
+      properties:
+        id:
+          type: string
+        userName:
+          type: string
+        firstName:
+          type: string
+        country:
+          type: string
+        profilePictureBasePath:
+          type: string

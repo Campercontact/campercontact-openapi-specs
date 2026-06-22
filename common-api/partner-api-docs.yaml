@@ -1,0 +1,635 @@
+openapi: 3.0.3
+info:
+  title: Campercontact Partners API
+  description: |
+    API for Campercontact partners to access location data
+    
+    ## Authentication
+    This API requires authentication using an API key. Include your API key in the `x-api-key` header with every request.
+    
+    To obtain an API key, contact Campercontact at developer@campercontact.com.
+    
+    ### Example
+    ```
+    x-api-key: your-api-key-here
+    ```
+  version: 1.0.0
+  contact:
+    name: Campercontact API Support
+    email: developer@campercontact.com
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /locations:
+    get:
+      summary: Get basic location information
+      description: Retrieve basic information about locations, optionally filtered by specific sitecodes
+      operationId: getLocations
+      tags:
+        - Locations
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - name: sitecodes
+          in: query
+          required: false
+          description: Optional comma-separated list of location sitecodes to filter results
+          schema:
+            type: string
+            example: "12345,67890,11111"
+        - name: limit
+          in: query
+          required: false
+          description: Number of results to return per page (default 10, max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 25
+        - name: offset
+          in: query
+          required: false
+          description: Number of results to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            example: 50
+      responses:
+        '200':
+          description: Locations retrieved successfully
+          headers:
+            X-Request-ID:
+              description: Unique identifier for this request
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLocationsResponse'
+              example:
+                data:
+                  - siteCode: "12345"
+                    name: "Camperpark De Zandstuve"
+                  - siteCode: "67890"
+                    name: "Camping Le Soleil"
+                pagination:
+                  limit: 10
+                  offset: 0
+                  total: 250
+        '400':
+          description: Bad Request - Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /locations/{sitecode}:
+    get:
+      summary: Get basic location information
+      description: Retrieve basic information about a specific location (sitecode and name only)
+      operationId: getLocationBySitecode
+      tags:
+        - Locations
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - name: sitecode
+          in: path
+          required: true
+          description: The unique identifier of the location
+          schema:
+            type: string
+            example: "12345"
+      responses:
+        '200':
+          description: Basic location information retrieved successfully
+          headers:
+            X-Request-ID:
+              description: Unique identifier for this request
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerLocationResponse'
+              example:
+                siteCode: "12345"
+                name: "Camperpark De Zandstuve"
+        '400':
+          description: Bad Request - Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Missing location sitecode"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Location not found"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /locations/availability:
+    post:
+      summary: Get realtime pricing and availability for multiple locations
+      description: Calculate and retrieve real-time pricing information and availability for multiple locations based on provided parameters such as dates, duration, and number of guests. This endpoint performs dynamic pricing calculations and returns personalized pricing details for each requested location.
+      operationId: getMultipleLocationsAvailability
+      tags:
+        - Locations
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+      requestBody:
+        required: true
+        description: Parameters for pricing calculation including the list of locations to check
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultipleLocationsDetailsRequest'
+      responses:
+        '200':
+          description: Multiple locations pricing and availability details retrieved successfully
+          headers:
+            X-Request-ID:
+              description: Unique identifier for this request
+              schema:
+                type: string
+                format: uuid
+            X-RateLimit-Limit:
+              description: Request limit per hour
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Requests remaining in current window
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Time when rate limit resets (Unix timestamp)
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultipleLocationsPricingResponse'
+              examples:
+                with-availability:
+                  summary: Multiple locations with availability
+                  value:
+                    locations:
+                      - sitecode: "12345"
+                        isBookable: true
+                        isOpen: true
+                        totalSpots: 30
+                        totalAvailableSpots: 30
+                        pitches:
+                          - name: "basic pitch"
+                            currency: "EUR"
+                            pricePerNight: 25.50
+                            totalPrice: 76.50
+                            touristTaxPrice: 2.50
+                            availableSpots: 30
+                      - sitecode: "67890"
+                        isBookable: false
+                        isOpen: true
+                        totalSpots: 15
+                        totalAvailableSpots: 15
+                        pitches:
+                          - name: "basic pitch"
+                            currency: "EUR"
+                            pricePerNight: 22.00
+                            totalPrice: 66.00
+                            touristTaxPrice: 1.50
+                            availableSpots: 15
+                mixed-availability:
+                  summary: Mixed availability - some locations available, others not
+                  value:
+                    locations:
+                      - sitecode: "12345"
+                        isBookable: true
+                        isOpen: true
+                        totalSpots: 30
+                        totalAvailableSpots: 30
+                        pitches:
+                          - name: "basic pitch"
+                            currency: "EUR"
+                            pricePerNight: 25.50
+                            totalPrice: 76.50
+                            touristTaxPrice: 2.50
+                            availableSpots: 30
+                      - sitecode: "67890"
+                        isBookable: false
+                        isOpen: false
+                        totalSpots: 15
+                        totalAvailableSpots: null
+                        pitches: null
+        '400':
+          description: Bad Request - Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /locations/{sitecode}/availability:
+    post:
+      summary: Get realtime location pricing and availability
+      description: Calculate and retrieve real-time pricing information and availability for a specific location based on provided parameters such as dates, duration, and number of guests. This endpoint performs dynamic pricing calculations and returns personalized pricing details.
+      operationId: getLocationAvailability
+      tags:
+        - Locations
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - name: sitecode
+          in: path
+          required: true
+          description: The unique identifier of the location
+          schema:
+            type: string
+            example: "12345"
+      requestBody:
+        required: false
+        description: Optional parameters for pricing calculation
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationDetailsRequest'
+      responses:
+        '200':
+          description: Location pricing and availability details retrieved successfully
+          headers:
+            X-Request-ID:
+              description: Unique identifier for this request
+              schema:
+                type: string
+                format: uuid
+            X-RateLimit-Limit:
+              description: Request limit per hour
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              description: Requests remaining in current window
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              description: Time when rate limit resets (Unix timestamp)
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationPricingResponse'
+              examples:
+                with-availability:
+                  summary: Location with available spots and pricing
+                  value:
+                    sitecode: "12345"
+                    isBookable: true
+                    isOpen: true
+                    totalSpots: 50
+                    totalAvailableSpots: 50
+                    pitches:
+                      - name: "basic pitch"
+                        currency: "EUR"
+                        pricePerNight: 25.50
+                        totalPrice: 76.50
+                        touristTaxPrice: 2.50
+                        availableSpots: 30
+                      - name: "pitch with electricity"
+                        currency: "EUR"
+                        pricePerNight: 30.00
+                        totalPrice: 90.00
+                        touristTaxPrice: 2.50
+                        availableSpots: 20
+                no-availability:
+                  summary: Location with no available spots
+                  value:
+                    sitecode: "12345"
+                    isBookable: false
+                    isOpen: false
+                    totalSpots: 15
+                    totalAvailableSpots: null
+                    pitches: null
+        '400':
+          description: Bad Request - Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Location not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too Many Requests - Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication. Contact Campercontact to obtain your API key.
+
+  parameters:
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      required: false
+      description: Language preference for localized responses (e.g., location descriptions)
+      schema:
+        type: string
+        enum: ["nl", "en", "de", "fr", "it"]
+        default: "en"
+        example: "en"
+
+  schemas:
+    PaginatedLocationsResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerLocationResponse'
+          description: Array of location data
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    PaginationInfo:
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          description: Number of results per page
+          example: 10
+        offset:
+          type: integer
+          description: Number of results skipped
+          example: 0
+        total:
+          type: integer
+          description: Total number of results available
+          example: 250
+
+    PartnerLocationResponse:
+      type: object
+      required:
+        - siteCode
+        - name
+      properties:
+        siteCode:
+          type: string
+          description: Unique sitecode identifier
+          example: "12345"
+        name:
+          type: string
+          description: Name of the location
+          example: "Camperpark De Zandstuve"
+
+    Error:
+      type: object
+      required:
+        - message
+        - timestamp
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "Location not found"
+        code:
+          type: number
+          description: Error code
+          example: 1
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred
+          example: "2024-10-29T10:30:00Z"
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            validationErrors:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+
+    MultipleLocationsDetailsRequest:
+      type: object
+      required:
+        - sitecodes
+      properties:
+        sitecodes:
+          type: array
+          items:
+            type: string
+          description: List of location sitecodes to check availability for
+          example: ["12345", "67890", "11111"]
+        date:
+          type: string
+          format: date
+          nullable: true
+          description: Date for pricing calculation (must be in UTC format)
+          example: "2024-06-15"
+        duration:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Duration of stay in nights for pricing calculation
+          example: 3
+        adults:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Number of adults for pricing calculation
+          example: 2
+        children:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Number of children for pricing calculation
+          example: 1
+
+    MultipleLocationsPricingResponse:
+      type: object
+      required:
+        - locations
+      properties:
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationPricingResponse'
+          description: Array of location availability and pricing information
+
+    LocationDetailsRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          nullable: true
+          description: Date for pricing calculation (must be in UTC format)
+          example: "2024-06-15"
+        duration:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Duration of stay in nights for pricing calculation
+          example: 3
+        adults:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Number of adults for pricing calculation
+          example: 2
+        children:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Number of children for pricing calculation
+          example: 1
+
+    LocationPricingResponse:
+      type: object
+      required:
+        - sitecode
+        - isBookable
+      properties:
+        sitecode:
+          type: string
+          description: Unique identifier of the location
+          example: "12345"
+        isBookable:
+          type: boolean
+          description: Whether the location supports real-time booking via TravelBase
+          example: true
+        isOpen:
+          type: boolean
+          nullable: true
+          description: |
+            Whether the location is open on the requested date (or today if no date provided),
+            based on the location's price/opening periods stored in the database.
+            Null if the location has no opening period data.
+          example: true
+        totalSpots:
+          type: integer
+          nullable: true
+          description: Total maximum capacity of the location as stored in the database
+          example: 30
+          minimum: 0
+        totalAvailableSpots:
+          type: integer
+          nullable: true
+          description: Sum of available spots across all pitch types in this response. Null when no pitch data is available.
+          example: 30
+          minimum: 0
+        pitches:
+          type: array
+          items:
+            $ref: '#/components/schemas/PitchPrice'
+          nullable: true
+          description: Array of available pitch types and their pricing. If null, the location is closed or has no available spots.
+
+    PitchPrice:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name/description of the pitch type (e.g., "pitch with electricity", "basic pitch", "pitch near water")
+          example: "pitch with electricity"
+        currency:
+          type: string
+          description: Currency code
+          example: "EUR"
+          default: "EUR"
+        pricePerNight:
+          type: number
+          format: double
+          nullable: true
+          description: Price per night for this pitch type
+          example: 25.50
+          minimum: 0
+        totalPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Total price for the stay for this pitch type
+          example: 127.50
+          minimum: 0
+        touristTaxPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Tourist tax price
+          example: 2.50
+          minimum: 0
+        availableSpots:
+          type: integer
+          description: Number of spots available for this pitch type
+          example: 25
+          minimum: 0
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized - Invalid or missing API key"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal server error"

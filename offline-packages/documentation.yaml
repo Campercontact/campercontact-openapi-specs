@@ -1,0 +1,71 @@
+openapi: 3.0.0
+info:
+  title: Offline packages API
+  description: Lambda for handling resources for offline packages.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local server
+  - url: https://services.acc.campercontact.com/
+    description: Acceptation server
+  - url: https://services.campercontact.com/
+    description: Production server
+
+paths:
+  /offline/countries:
+    get:
+      summary: Get a list off supported counties for offline
+      description: Returns a json which contains all countries for offline support. For each country, the download link for the individual elements are included.
+      responses:
+        '200':
+          description: Offline packages are returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OffLinePackages"
+
+components:
+  schemas:
+    OffLinePackages:
+      type: array
+      items:
+        $ref: '#/components/schemas/OfflinePackage'
+    OfflinePackage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3544
+        urlPoiDump:
+          type: string
+          format: uri
+          example: "https://poi.campercontact.com/api/v1/dump/countries/3544/pois?locale=nl"
+        lastUpdatedDate:
+          type: string
+          format: date-time
+          example: "2021-06-30T17:53:14.531Z"
+        approximateFileSizeInKb:
+          type: integer
+          example: 11867
+        urlTileZip:
+          type: string
+          format: uri
+          example: "https://poi.campercontact.com/media/tiles/lu.zip"
+        urlGeolocationDump:
+          type: string
+          format: uri
+          example: "https://poi.campercontact.com/api/v1/dump/countries/3544/geolocations?locale=nl"
+        name:
+          type: string
+          example: "Luxemburg"
+        code:
+          type: string
+          example: "LU"
+        boundingBox:
+          type: string
+          example: "5.7239,49.4422,6.5341,50.1857,"
+        urlPhotosZip:
+          type: string
+          format: uri
+          example: "https://poi.campercontact.com/media/coverPhotos/lu.zip"
+
