@@ -1304,6 +1304,54 @@ paths:
                 type: "array"
                 items:
                   $ref: "#/components/schemas/BookingResponse"
+  /v1/bookings/cart:
+    post:
+      description: "POST /v1/bookings/cart <br> Creates a cart with the specified booking\
+        \ details and returns a checkout URL. Skips the calendar selection step by\
+        \ pre-filling dates and guest counts. <br> Requires the user to be authenticated.\
+        \ <br> Request Body: <br> - CreateCartRequest containing rentalUnitId, rentalUnitSlug,\
+        \ dates, and guest counts. <br> Response: <br> - 200 OK: A CreateCartResponse\
+        \ with cartId, checkoutUrl, checkoutRedirectUrl, totalPrice, status, and errors."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCartRequest"
+        required: true
+      responses:
+        "400":
+          description: "Bad Request"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: "400: Bad Request"
+        "403":
+          description: "Forbidden"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: "Forbidden"
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: "500: Internal Server Error"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CreateCartResponse"
   /v1/create-checkout-session:
     post:
       description: "POST /v1/create-checkout-session <br> Creates a new Stripe checkout\
@@ -7706,7 +7754,9 @@ paths:
                   value: "500: Internal Server Error"
   /v2/reviews/{sitecode}:
     post:
-      description: "Create a review"
+      description: "Create a review. The text field is optional: omit it or send an empty\
+        \ string to create a rating-only review (no 400). Rating-only reviews skip LLM\
+        \ analysis. The 3-month duplicate-review rule applies regardless of text."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -11224,6 +11274,86 @@ components:
         - "formattedPrice"
         - "rentalUnitName"
         - "status"
+    CreateCartRequest:
+      type: "object"
+      description: "Request to create a booking cart with pre-filled dates and guest\
+        \ counts, skipping the calendar selection step."
+      properties:
+        rentalUnitId:
+          type: "string"
+          description: "The TravelBase rental unit ID (e.g. tor_campercontact_prod.RentalUnit_1409)"
+        rentalUnitSlug:
+          type: "string"
+          description: "The rental unit slug (e.g. 43166-1)"
+        arrivalDate:
+          type: "string"
+          description: "Check-in date in YYYY-MM-DD format"
+        departureDate:
+          type: "string"
+          description: "Check-out date in YYYY-MM-DD format"
+        amountAdults:
+          type: "integer"
+          format: "int32"
+          description: "Number of adults"
+        amountChildren:
+          type: "integer"
+          format: "int32"
+          description: "Number of children (default: 0)"
+          default: 0
+        amountBabies:
+          type: "integer"
+          format: "int32"
+          description: "Number of babies (default: 0)"
+          default: 0
+        amountPets:
+          type: "integer"
+          format: "int32"
+          description: "Number of pets (default: 0)"
+          default: 0
+        amountYouths:
+          type: "integer"
+          format: "int32"
+          description: "Number of youths (default: 0)"
+          default: 0
+      required:
+        - "rentalUnitId"
+        - "rentalUnitSlug"
+        - "arrivalDate"
+        - "departureDate"
+        - "amountAdults"
+    CreateCartResponse:
+      type: "object"
+      description: "Response from creating a booking cart, containing checkout URLs\
+        \ and order details."
+      properties:
+        cartId:
+          type: "string"
+          description: "The TravelBase cart ID"
+        checkoutUrl:
+          type: "string"
+          description: "Direct URL to the checkout page for this cart"
+        checkoutRedirectUrl:
+          type: "string"
+          description: "Redirect URL that pre-fills booking details in the checkout flow"
+        totalPrice:
+          type: "number"
+          format: "double"
+          description: "Total price for the booking"
+        status:
+          type: "string"
+          description: "Cart status (e.g. OPEN, PENDING)"
+        errors:
+          type: "array"
+          description: "List of validation errors, if any"
+          items:
+            type: "string"
+      required:
+        - "cartId"
+        - "checkoutUrl"
+        - "checkoutRedirectUrl"
+        - "totalPrice"
+        - "status"
+        - "errors"
     B2cCheckoutSessionRequest:
       type: "object"
       properties:
@@ -11431,6 +11561,10 @@ components:
           $ref: "#/components/schemas/RatingsResponse"
         showUpsell:
           type: "boolean"
+        givenRating:
+          type: "integer"
+          nullable: true
+          description: "The authenticated user's rating (1-5) for this location, or null if not reviewed"
       required:
         - "count"
         - "ratings"
@@ -11834,9 +11968,6 @@ components:
       required:
         - "duration"
         - "price"
-        - "type"
-        - "rentalUnitSlug"
-        - "rentalUnitName"
     MainImageResponse:
       type: "object"
       properties:
@@ -13797,11 +13928,16 @@ components:
       properties:
         text:
           type: "string"
+          nullable: true
+          maxLength: 450
+          description: "Review text. Optional: omit or send an empty string for a rating-only\
+            \ review. Rating-only reviews skip LLM analysis."
         rating:
           type: "integer"
           format: "int32"
+          minimum: 1
+          maximum: 5
       required:
-        - "text"
         - "rating"
     CamperRoutesListResponse:
       type: "object"
