@@ -11561,10 +11561,6 @@ components:
           $ref: "#/components/schemas/RatingsResponse"
         showUpsell:
           type: "boolean"
-        givenRating:
-          type: "integer"
-          nullable: true
-          description: "The authenticated user's rating (1-5) for this location, or null if not reviewed"
       required:
         - "count"
         - "ratings"
@@ -11614,6 +11610,10 @@ components:
             type: "integer"
             format: "int64"
           description: "Number of reviews per topic, keyed by slug"
+        givenRating:
+          type: "integer"
+          nullable: true
+          description: "The authenticated user's rating (1-5) for this location, or null if not reviewed"
       required:
         - "count"
         - "ratings"
