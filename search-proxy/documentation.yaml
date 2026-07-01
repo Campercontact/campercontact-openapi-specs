@@ -169,7 +169,6 @@ paths:
         - $ref: '#/components/parameters/filter.price'
         - $ref: '#/components/parameters/filter.fromDate'
         - $ref: '#/components/parameters/filter.toDate'
-        - $ref: '#/components/parameters/filter.date'
         - $ref: '#/components/parameters/filter.maxCamperSpots'
         - $ref: '#/components/parameters/filter.maxCamperLength'
         - $ref: '#/components/parameters/filter.maxStay'
@@ -214,7 +213,6 @@ paths:
         - $ref: '#/components/parameters/filter.price'
         - $ref: '#/components/parameters/filter.fromDate'
         - $ref: '#/components/parameters/filter.toDate'
-        - $ref: '#/components/parameters/filter.date'
         - $ref: '#/components/parameters/filter.maxCamperSpots'
         - $ref: '#/components/parameters/filter.maxCamperLength'
         - $ref: '#/components/parameters/filter.maxStay'
@@ -296,6 +294,55 @@ paths:
           description: Invalid input - either poi_id, sitecode, or both lat and lon must be provided
         '404':
           description: Location not found (POI mode only)
+
+  /search/results/preview/geometry:
+    get:
+      summary: Get the GeoJSON boundary for a coordinate
+      description: >
+        Returns only the GeoJSON boundary of the place at the given coordinates. Performs a single
+        reverse geocode against Nominatim with `polygon_geojson=1` and returns the matched place's
+        geometry as a `geometry` field (typically a Polygon or MultiPolygon, occasionally a Point for
+        node-based matches). Useful for drawing the outline of the resolved area on a map.
+
+        `lat` and `lon` are both required. The optional `zoom` is the Nominatim reverse zoom that
+        controls which administrative feature the coordinate resolves to (lower = larger area, e.g.
+        3=country, 5=state, 10=city, 18=building); without it the request resolves at city level
+        (zoom 10). When Nominatim returns no geometry for the coordinates, `geometry` is `null`.
+      tags:
+        - Results
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - in: query
+          name: lat
+          required: true
+          schema:
+            type: number
+          description: Latitude (must be provided together with lon)
+        - in: query
+          name: lon
+          required: true
+          schema:
+            type: number
+          description: Longitude (must be provided together with lat)
+        - in: query
+          name: zoom
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 18
+          description: >
+            Nominatim reverse zoom controlling the resolved administrative level (lower = larger
+            area; 3=country, 5=state, 10=city, 18=building). Defaults to 10 (city).
+      responses:
+        '200':
+          description: Geo-location preview with geometry returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoLocationGeometryPreviewResponse'
+        '400':
+          description: Invalid input - both lat and lon are required
 
   /search/destination:
     get:
@@ -527,14 +574,6 @@ components:
       schema:
         type: string
         format: date
-    filter.date:
-      name: date
-      in: query
-      deprecated: true
-      description: Deprecated. Use the separate `fromDate` and `toDate` query parameters instead.
-      example: '{"fromDate":"2026-07-10","toDate":"2026-07-12"}'
-      schema:
-        type: string
     filter.maxCamperSpots:
       name: maxCamperSpots
       in: query
@@ -1021,6 +1060,70 @@ components:
             When includeOsmTypes is true, additional types may appear based on the OSM osm_value (e.g. "camp_site", "caravan_site", "hotel").
           enum: [city, region, country, municipality]
 
+    GeoJsonPolygon:
+      type: object
+      description: GeoJSON Polygon geometry as returned by Nominatim for the geometry preview.
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Polygon]
+        coordinates:
+          type: array
+          description: Array of linear rings; first ring is the outer boundary, subsequent rings are holes. Each ring is an array of `[lon, lat]` positions.
+          items:
+            type: array
+            items:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+
+    GeoJsonMultiPolygon:
+      type: object
+      description: GeoJSON MultiPolygon geometry as returned by Nominatim for the geometry preview.
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [MultiPolygon]
+        coordinates:
+          type: array
+          description: Array of polygons. Each polygon is an array of linear rings; each ring is an array of `[lon, lat]` positions.
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: array
+                minItems: 2
+                maxItems: 2
+                items:
+                  type: number
+
+    GeoJsonPoint:
+      type: object
+      description: GeoJSON Point geometry, returned by Nominatim for node-based matches in the geometry preview.
+      required:
+        - type
+        - coordinates
+      properties:
+        type:
+          type: string
+          enum: [Point]
+        coordinates:
+          type: array
+          description: A single `[lon, lat]` position.
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+
     BoundingBox:
       type: object
       required:
@@ -1189,6 +1292,36 @@ components:
           description: Translations for each administrative level in all 6 supported languages
           items:
             $ref: '#/components/schemas/GeoLocationTranslation'
+
+    GeoLocationGeometryPreviewResponse:
+      type: object
+      description: >
+        Response for the geometry preview (`/search/results/preview/geometry`). A GeoJSON `Feature`
+        whose `geometry` is the boundary of the reverse-geocoded place, as returned by Nominatim.
+        Returned as a Feature so it can be passed straight into map libraries (Mapbox GL, Leaflet,
+        deck.gl) without unwrapping.
+      required:
+        - type
+        - properties
+        - geometry
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        properties:
+          type: object
+          description: Empty object; reserved for future metadata about the boundary.
+        geometry:
+          nullable: true
+          description: >
+            GeoJSON boundary of the matched place, passed through from Nominatim's `polygon_geojson`
+            output. Typically a Polygon or MultiPolygon for area features (cities, regions,
+            countries); may be a Point for node-based matches. `null` when Nominatim returns no
+            geometry for the coordinates.
+          oneOf:
+            - $ref: '#/components/schemas/GeoJsonPolygon'
+            - $ref: '#/components/schemas/GeoJsonMultiPolygon'
+            - $ref: '#/components/schemas/GeoJsonPoint'
 
     GeoLocationTranslation:
       type: object
