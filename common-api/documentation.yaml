@@ -10913,9 +10913,9 @@ components:
       properties:
         displayName:
           type: "string"
-        profilePhoto:
+        profilePictureUrl:
+          type: "string"
           nullable: true
-          $ref: "#/components/schemas/MediaResponse"
       required:
         - "displayName"
     CreateUserRequest:
