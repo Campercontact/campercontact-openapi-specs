@@ -12348,6 +12348,9 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/TranslatedPermalinkResponse"
+        permalink:
+          type: "string"
+          nullable: true
         links:
           type: "array"
           items:
