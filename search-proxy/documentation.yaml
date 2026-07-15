@@ -334,6 +334,18 @@ paths:
           description: >
             Nominatim reverse zoom controlling the resolved administrative level (lower = larger
             area; 3=country, 5=state, 10=city, 18=building). Defaults to 10 (city).
+        - in: query
+          name: osmId
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: >
+            OSM id of the place to outline (from a suggestion's osmId). When supplied, the boundary
+            is resolved by looking that OSM relation up instead of reverse-geocoding lat/lon — the
+            only reliable way to outline places whose admin level no fixed reverse zoom hits (e.g.
+            islands such as Texel). If the id isn't a relation with a polygon, the request
+            transparently falls back to the lat/lon/zoom reverse geocode.
       responses:
         '200':
           description: Geo-location preview with geometry returned successfully
@@ -1026,7 +1038,11 @@ components:
           description: Prefixed OSM identifier (e.g. "osm-12345")
         osmId:
           type: integer
-          description: OpenStreetMap ID of the feature
+          description: >
+            OpenStreetMap ID of the feature. Pass it to the geometry preview
+            (osmId) to outline the feature's exact boundary via a relation lookup
+            — this is how islands get their own outline instead of the province a
+            point reverse-geocode falls back to.
         name:
           type: string
         altNames:
