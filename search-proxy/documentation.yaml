@@ -772,6 +772,53 @@ components:
           description: Price per night in EUR with the booking fee subtracted (totalPrice / nights).
           example: 42.17
 
+    PriceHistogram:
+      type: object
+      description: >
+        Price distribution for the filter screen: how many distinct locations fall in each
+        fixed-width price bucket, plus the overall min/max used to position the slider handles.
+        Buckets are contiguous across the observed range (empty buckets are included with count 0).
+      required:
+        - min
+        - max
+        - interval
+        - buckets
+      properties:
+        min:
+          type: number
+          description: Lowest price in EUR across all matching locations. Used for the lower slider handle.
+          example: 0
+        max:
+          type: number
+          description: Highest price in EUR across all matching locations. Used for the upper slider handle.
+          example: 150
+        interval:
+          type: number
+          description: Width in EUR of each bucket. Configurable via the PRICE_HISTOGRAM_INTERVAL env var (default 5).
+          example: 5
+        buckets:
+          type: array
+          description: One entry per price bucket, ordered ascending by `from`.
+          items:
+            type: object
+            required:
+              - from
+              - to
+              - count
+            properties:
+              from:
+                type: number
+                description: Inclusive lower bound of the bucket in EUR.
+                example: 25
+              to:
+                type: number
+                description: Exclusive upper bound of the bucket in EUR (`from` + `interval`).
+                example: 30
+              count:
+                type: integer
+                description: Number of distinct locations with a price in this bucket.
+                example: 2
+
     LocationDetailed:
       type: object
       required:
@@ -990,6 +1037,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LocationDetailed'
+        priceHistogram:
+          $ref: '#/components/schemas/PriceHistogram'
+          description: >
+            Distribution of matching locations across fixed-width price buckets, for the
+            filter-screen price chart. Only present on the first page (when `offset` is omitted or 0),
+            and omitted entirely when no matching location has a price. The histogram reflects every
+            active filter EXCEPT the `price` range itself, so moving the price handles does not
+            reshape its own chart.
 
     PreviewResponse:
       type: object
