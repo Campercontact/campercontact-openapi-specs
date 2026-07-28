@@ -9574,6 +9574,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: "Delete a saved filter"
+      description: "Deletes a single saved filter owned by the authenticated user. Filters owned by other users are reported as not found so their existence is not leaked. Requires authentication."
+      tags:
+        - Filters
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          description: "The saved filter's id."
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "204":
+          description: "No Content - The saved filter was deleted"
+        "400":
+          description: "Bad Request - The id path segment is not a valid UUID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Unauthorized - User not authenticated"
+        "403":
+          description: "Forbidden - The authenticated token is missing the nativeUserId claim"
+        "404":
+          description: "Not Found - No such filter exists for this user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     # ==================== JOURNEYS SCHEMAS ====================
