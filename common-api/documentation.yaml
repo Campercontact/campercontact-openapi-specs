@@ -9515,6 +9515,65 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: "Forbidden - The authenticated token is missing the nativeUserId claim"
+    get:
+      summary: "List saved filters"
+      description: "Lists all saved filters owned by the authenticated user, most recently created first. Requires authentication."
+      tags:
+        - Filters
+      security:
+        - bearerAuth: [ ]
+      responses:
+        "200":
+          description: "OK - The user's saved filters (may be empty)"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/SavedFilterResponseItem"
+        "401":
+          description: "Unauthorized - User not authenticated"
+        "403":
+          description: "Forbidden - The authenticated token is missing the nativeUserId claim"
+  /v1/filters/{id}:
+    get:
+      summary: "Get a saved filter"
+      description: "Returns a single saved filter owned by the authenticated user. Filters owned by other users are reported as not found so their existence is not leaked. Requires authentication."
+      tags:
+        - Filters
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          description: "The saved filter's id."
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK - The saved filter"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedFilterResponseItem"
+        "400":
+          description: "Bad Request - The id path segment is not a valid UUID"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Unauthorized - User not authenticated"
+        "403":
+          description: "Forbidden - The authenticated token is missing the nativeUserId claim"
+        "404":
+          description: "Not Found - No such filter exists for this user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     # ==================== JOURNEYS SCHEMAS ====================
@@ -14794,6 +14853,34 @@ components:
       required:
         - "name"
         - "filters"
+    SavedFilterResponseItem:
+      type: "object"
+      description: "A persisted saved filter as returned by the read endpoints. Like SavedFilterResponse but also exposes the stored id and audit timestamps so the front-end can reference a specific filter later."
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "The saved filter's persisted id."
+        name:
+          type: "string"
+          description: "The saved filter's name."
+        filters:
+          type: "array"
+          description: "The filter's criteria re-encoded as UI control descriptors."
+          items:
+            $ref: "#/components/schemas/FilterResponseItem"
+        created:
+          type: "string"
+          description: "Timestamp the filter was created."
+        modified:
+          type: "string"
+          description: "Timestamp the filter was last modified."
+      required:
+        - "id"
+        - "name"
+        - "filters"
+        - "created"
+        - "modified"
     FilterResponseItem:
       type: "object"
       description: "A single UI-oriented filter control descriptor. Optional keys are serialized as explicit null (explicitNulls = true)."
