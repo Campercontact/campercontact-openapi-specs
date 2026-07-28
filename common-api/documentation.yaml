@@ -9574,6 +9574,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: "Update a saved filter"
+      description: "Updates a single saved filter owned by the authenticated user. Fields omitted from the request body keep their existing value; the merged filter is validated before it is saved. Filters owned by other users are reported as not found so their existence is not leaked. Requires authentication."
+      tags:
+        - Filters
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          description: "The saved filter's id."
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFilterRequest"
+      responses:
+        "200":
+          description: "OK - The updated saved filter"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedFilterResponseItem"
+        "400":
+          description: "Bad Request - The id path segment is not a valid UUID, or the merged filter failed validation (e.g. blank name, empty or duplicate criteria, unknown field, or an invalid criterion for its field)"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorResponse"
+                  - type: "array"
+                    description: "Validation error messages, one per failed constraint."
+                    items:
+                      $ref: "#/components/schemas/ErrorMessage"
+        "401":
+          description: "Unauthorized - User not authenticated"
+        "403":
+          description: "Forbidden - The authenticated token is missing the nativeUserId claim"
+        "404":
+          description: "Not Found - No such filter exists for this user"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       summary: "Delete a saved filter"
       description: "Deletes a single saved filter owned by the authenticated user. Filters owned by other users are reported as not found so their existence is not leaked. Requires authentication."
@@ -14767,6 +14816,20 @@ components:
       required:
         - "name"
         - "criteria"
+    UpdateFilterRequest:
+      type: "object"
+      description: "Request body for updating a saved filter. All fields are optional; an omitted field keeps its existing value. The merged result is validated with the same rules as CreateFilterRequest."
+      properties:
+        name:
+          type: "string"
+          nullable: true
+          description: "New name for the filter. When omitted, the existing name is kept. Must not be blank."
+        criteria:
+          type: "array"
+          nullable: true
+          description: "Replacement filter criteria. When omitted, the existing criteria are kept. When present, must contain at least one item and must not repeat a field."
+          items:
+            $ref: "#/components/schemas/FilterCriterion"
     FilterCriterion:
       description: "A single filter criterion. Polymorphic; the `type` property selects the concrete shape. Each `field` must be a known filter field and match the criterion type that field expects."
       oneOf:
