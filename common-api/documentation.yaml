@@ -7756,7 +7756,9 @@ paths:
     post:
       description: "Create a review. The text field is optional: omit it or send an empty\
         \ string to create a rating-only review (no 400). Rating-only reviews skip LLM\
-        \ analysis. The 3-month duplicate-review rule applies regardless of text."
+        \ analysis. The 3-month duplicate-review rule applies regardless of text. The\
+        \ response includes recommendedFlow (SUGGEST_EDIT for rating 1-2, STANDARD for 3,\
+        \ PRAISE for 4-5) telling the client which post-rating follow-up flow to show."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -11659,6 +11661,16 @@ components:
         isPinned:
           type: "boolean"
           nullable: true
+        recommendedFlow:
+          type: "string"
+          enum:
+            - "SUGGEST_EDIT"
+            - "STANDARD"
+            - "PRAISE"
+          nullable: true
+          description: "Post-rating follow-up flow the client should show, derived from the rating\
+            \ (1-2: SUGGEST_EDIT, 3: STANDARD, 4-5: PRAISE). Only set on review creation; null on\
+            \ all other endpoints returning reviews."
       required:
         - "id"
         - "rating"
