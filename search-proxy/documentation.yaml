@@ -36,6 +36,39 @@ paths:
           description: Invalid input
         '500':
           description: Server error
+  /search/proximity:
+    get:
+      summary: Detect locations within a small radius of the given lat/lon
+      description: >
+        Returns visible POIs whose coordinates fall within `radius` metres of the given
+        point, nearest first, capped at 25 results. Intended for "are you at this campsite?"
+        style detection, not for general search - use `/search/results/list` for that.
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - name: lat
+          in: query
+          required: true
+          description: Latitude of the point to detect around
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          description: Longitude of the point to detect around
+          schema:
+            type: number
+        - $ref: '#/components/parameters/radiusMetersParam'
+      responses:
+        '200':
+          description: Matching locations returned successfully, nearest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProximityResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
   /search/popular:
     get:
       summary: Search for the most popular locations
@@ -722,6 +755,16 @@ components:
       schema:
         type: string
         pattern: '^\\d+km$'
+    radiusMetersParam:
+      name: radius
+      in: query
+      description: Detection radius in metres. Must be greater than 0 and at most 100.
+      schema:
+        type: number
+        minimum: 0
+        exclusiveMinimum: true
+        maximum: 100
+        default: 75
   schemas:
     LatLng:
       type: object
@@ -974,6 +1017,49 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/LocationDetailed'
+
+    ProximityResponse:
+      type: array
+      description: Matching locations, sorted by ascending distance from the given point. At most 25 items.
+      items:
+        $ref: '#/components/schemas/ProximityLocation'
+
+    ProximityLocation:
+      type: object
+      description: A location within the detection radius. Only the fields needed for proximity detection are returned.
+      required:
+        - id
+        - type
+        - title
+        - sitecode
+        - location
+        - permalink
+        - metaData
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: poi
+        title:
+          type: string
+        subtitle:
+          type: string
+        sitecode:
+          type: integer
+        location:
+          $ref: '#/components/schemas/LatLng'
+        permalink:
+          type: string
+        metaData:
+          type: object
+          required:
+            - distance
+          properties:
+            distance:
+              type: number
+              description: Distance in metres from the requested lat/lon, rounded.
+              example: 42
 
     SuggestionsResponse:
       type: array
