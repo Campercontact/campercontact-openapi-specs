@@ -164,9 +164,8 @@ paths:
           in: query
           description: |
             Page size — maximum number of journeys to return.
-            Defaults to `250` (preserves the previous behavior for older
-            clients that don't paginate). New clients should pass an explicit
-            `limit` (e.g. `20`) to enable pagination.
+            Defaults to `500` for clients that don't paginate. New clients
+            should pass an explicit `limit` (e.g. `20`) to enable pagination.
             Use together with `offset` to paginate (e.g. infinite scroll).
             Validated even when `journeyIds` is provided, but has no effect
             on the result in that case.
@@ -176,8 +175,8 @@ paths:
           schema:
             type: integer
             minimum: 1
-            maximum: 250
-            default: 250
+            maximum: 500
+            default: 500
           example: 20
 
         - name: offset
