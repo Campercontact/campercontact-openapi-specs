@@ -343,21 +343,11 @@ paths:
                   type: string
                   description: "Required when rejectionReason is 'other_reason'. Custom rejection message."
                   example: "Location does not meet our quality standards"
-                removalReason:
-                  type: string
-                  allOf:
-                    - $ref: "#/components/schemas/RemovalReason"
-                  description: "Only allowed when status is 'expired'. Forwarded to the uploader and hosts via the LOCATION_REMOVED event; not persisted."
             examples:
               activate:
                 summary: "Activate a location"
                 value:
                   status: "active"
-              expire_permanently_closed:
-                summary: "Remove a location - permanently closed"
-                value:
-                  status: "expired"
-                  removalReason: "permanently_closed"
               deny_insufficient_info:
                 summary: "Deny location - insufficient information"
                 value:
@@ -2624,7 +2614,6 @@ paths:
                 type: "object"
   /v1/location/{id}/photos/{mediaId}:
     delete:
-      description: "DELETE /v1/location/{id}/photos/{mediaId} <br> Deletes a user-uploaded photo. When a moderation 'reason' query parameter is supplied, a PHOTO_DELETED event is published to the uploader; without a reason no event is sent."
       parameters:
         - name: "id"
           in: "path"
@@ -2636,12 +2625,6 @@ paths:
           required: true
           schema:
             type: "string"
-        - name: "reason"
-          in: "query"
-          required: false
-          description: "Optional predefined deletion reason. Forwarded to the uploader; not persisted."
-          schema:
-            $ref: "#/components/schemas/PhotoDeletionReason"
       responses:
         "400":
           description: "Bad Request"
@@ -3509,19 +3492,13 @@ paths:
                   $ref: "#/components/schemas/ChangeRequestResponse"
   /v1/change-requests/{id}/reject:
     patch:
-      description: "PATCH /v1/change-requests/{id}/reject <br> Rejects a change request by id. <br> Requires moderator permissions. <br> An optional predefined decline reason is forwarded to the contributor via the change_request_declined event; it is not persisted."
+      description: "PATCH /v1/change-requests/{id}/reject <br> Rejects a change request by id. <br> Requires moderator permissions."
       parameters:
         - name: "id"
           in: "path"
           required: true
           schema:
             type: "string"
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RejectChangeRequestRequest"
       responses:
         "400":
           description: "Bad Request"
@@ -8080,19 +8057,13 @@ paths:
                 $ref: "#/components/schemas/ReviewsResponse"
   /v2/reviews/{reviewId}:
     delete:
-      description: "Delete a review. When a moderation 'reason' query parameter is supplied, a REVIEW_REMOVED event is published to the author; without a reason no event is sent."
+      description: "Delete a review"
       parameters:
         - name: "reviewId"
           in: "path"
           required: true
           schema:
             type: "string"
-        - name: "reason"
-          in: "query"
-          required: false
-          description: "Optional predefined removal reason. Forwarded to the author; not persisted."
-          schema:
-            $ref: "#/components/schemas/ReviewRemovalReason"
       responses:
         "200":
           description: "OK"
@@ -13734,59 +13705,6 @@ components:
         - "owner_does_not_want_listing"
         - "not_allowed_stay_overnights"
         - "other_reason"
-    RemovalReason:
-      type: "string"
-      description: "Predefined reason for removing a location (status 'expired'). Forwarded to the uploader and hosts via the LOCATION_REMOVED event; not persisted."
-      enum:
-        - "permanently_closed"
-        - "does_not_exist"
-        - "duplicate_location"
-        - "does_not_meet_criteria"
-        - "merged_with_other_location"
-        - "no_longer_accessible"
-    ChangeRequestDeclineReason:
-      type: "string"
-      description: "Predefined reason for declining a change request. Forwarded to the contributor via the change_request_declined event; not persisted."
-      enum:
-        - "could_not_be_verified"
-        - "conflicts_with_verified_data"
-        - "insufficient_details"
-        - "already_correct"
-        - "evidence_required"
-        - "out_of_scope"
-    RejectChangeRequestRequest:
-      type: "object"
-      description: "Optional body for rejecting a change request."
-      properties:
-        reason:
-          type: "string"
-          nullable: true
-          allOf:
-            - $ref: "#/components/schemas/ChangeRequestDeclineReason"
-    PhotoDeletionReason:
-      type: "string"
-      description: "Predefined reason for deleting a user-uploaded photo. Forwarded to the uploader via the PHOTO_DELETED event; not persisted."
-      enum:
-        - "bad_quality"
-        - "not_relevant"
-        - "duplicate"
-        - "contains_personal_data"
-        - "inappropriate_content"
-        - "promotional_content"
-        - "copyright"
-        - "wrong_location"
-    ReviewRemovalReason:
-      type: "string"
-      description: "Predefined reason for removing a review. Forwarded to the author via the REVIEW_REMOVED event; not persisted."
-      enum:
-        - "offensive_language"
-        - "spam"
-        - "not_based_on_visit"
-        - "off_topic"
-        - "contains_personal_data"
-        - "duplicate"
-        - "conflict_of_interest"
-        - "wrong_location"
     DiscountType:
       type: "string"
       description: "Discount card types accepted at the location."
