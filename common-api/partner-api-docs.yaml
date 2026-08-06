@@ -138,9 +138,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "Location not found"
+                errors:
+                  - message: "No location found with the given sitecode"
+                    code: 3001
+                    details: "12345"
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -444,6 +447,34 @@ components:
           format: date-time
           description: Timestamp when the error occurred
           example: "2024-10-29T10:30:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          description: One or more errors describing what went wrong
+          items:
+            type: object
+            required:
+              - message
+              - code
+            properties:
+              message:
+                type: string
+                description: Human-readable description of the error
+                example: "No location found with the given sitecode"
+              code:
+                type: integer
+                description: Stable machine-readable error code
+                example: 3001
+              details:
+                type: string
+                nullable: true
+                description: Optional context about the error (e.g. the offending value)
+                example: "12345"
 
     ValidationError:
       allOf:
