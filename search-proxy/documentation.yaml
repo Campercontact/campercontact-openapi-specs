@@ -281,6 +281,10 @@ paths:
         Returns a preview for a location. Supports two modes:
 
         **POI mode** (poi_id or sitecode): Returns a detailed location from ElasticSearch with price range information.
+        When optional booking params are supplied (fromDate/toDate/persons/babies/pets; fromDate/toDate must be
+        provided together and toDate must be after fromDate) and the location is TravelBase-bookable, the response
+        is enriched with a realtime price and priceBreakdown for that stay (same enrichment as /results/list).
+        Without them, pricing falls back to a default today->tomorrow window.
 
         **Geo-location mode** (lat + lon): Performs a reverse geocode using Nominatim to resolve the
         city, region, and country for the given coordinates, with translations in 6 languages
@@ -314,6 +318,11 @@ paths:
           schema:
             type: number
           description: Longitude for geo-location preview (must be provided together with lat)
+        - $ref: '#/components/parameters/filter.fromDate'
+        - $ref: '#/components/parameters/filter.toDate'
+        - $ref: '#/components/parameters/filter.persons'
+        - $ref: '#/components/parameters/filter.babies'
+        - $ref: '#/components/parameters/filter.pets'
       responses:
         '200':
           description: Preview returned successfully. Response schema depends on the mode used.
