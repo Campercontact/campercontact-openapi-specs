@@ -1223,8 +1223,8 @@ components:
           type: string
           description: >
             The type of place. Standard types are city, region, country and municipality.
+            Towns and villages are reported as "city".
             When includeOsmTypes is true, additional types may appear based on the OSM osm_value (e.g. "camp_site", "caravan_site", "hotel").
-          enum: [city, region, country, municipality]
 
     GeoJsonPolygon:
       type: object
