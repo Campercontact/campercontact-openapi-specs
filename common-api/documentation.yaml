@@ -13358,6 +13358,22 @@ components:
           type: "number"
           format: "double"
           nullable: true
+          description: "Length in metres"
+        height:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          description: "Height in centimetres"
+        width:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          description: "Width in centimetres"
+        weight:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          description: "Weight in kilograms"
       required:
         - "brand"
         - "model"
@@ -13610,9 +13626,10 @@ components:
           type: "string"
           nullable: true
         motorhomeAssemblyYear:
-          type: "integer"
+          type:
+            - "integer"
+            - "null"
           format: "int32"
-          nullable: true
         motorhomeChassis:
           type: "string"
           nullable: true
@@ -13644,10 +13661,34 @@ components:
             - "RENT"
             - "BORROW"
             - "UNKNOWN"
+        # The five motorhome numbers below spell nullability as a 3.1 type union rather than `nullable: true`
+        # like the rest of this file. `nullable` is not a keyword in OpenAPI 3.1 and is silently dropped, so
+        # the generated client types would omit `| null` and forbid sending the explicit null that clears a
+        # stored value. The rest of the spec has the same flaw; correcting it wholesale is a separate change.
         motorhomeLength:
-          type: "number"
+          type:
+            - "number"
+            - "null"
           format: "double"
-          nullable: true
+          description: "Length in metres"
+        motorhomeHeight:
+          type:
+            - "integer"
+            - "null"
+          format: "int32"
+          description: "Height in centimetres"
+        motorhomeWidth:
+          type:
+            - "integer"
+            - "null"
+          format: "int32"
+          description: "Width in centimetres"
+        motorhomeWeight:
+          type:
+            - "integer"
+            - "null"
+          format: "int32"
+          description: "Weight in kilograms"
         isPrivate:
           type: "boolean"
           nullable: true
