@@ -348,6 +348,11 @@ paths:
                   allOf:
                     - $ref: "#/components/schemas/RemovalReason"
                   description: "Only allowed when status is 'expired'. Forwarded to the uploader and hosts via the LOCATION_REMOVED event; not persisted."
+                removalReasonMessage:
+                  type: string
+                  maxLength: 500
+                  description: "Required when removalReason is 'other'. The moderator's own wording, forwarded alongside the reason code; not persisted."
+                  example: "Eigenaar heeft telefonisch verzocht de locatie te verwijderen"
             examples:
               activate:
                 summary: "Activate a location"
@@ -358,6 +363,12 @@ paths:
                 value:
                   status: "expired"
                   removalReason: "permanently_closed"
+              expire_other_reason:
+                summary: "Remove a location - other reason with free text"
+                value:
+                  status: "expired"
+                  removalReason: "other"
+                  removalReasonMessage: "Eigenaar heeft telefonisch verzocht de locatie te verwijderen"
               deny_insufficient_info:
                 summary: "Deny location - insufficient information"
                 value:
@@ -2639,9 +2650,16 @@ paths:
         - name: "reason"
           in: "query"
           required: false
-          description: "Optional predefined deletion reason. Forwarded to the uploader; not persisted."
+          deprecated: true
+          description: "Predefined deletion reason. Superseded by the request body; kept for callers that predate it. Ignored when the body supplies a reason."
           schema:
             $ref: "#/components/schemas/PhotoDeletionReason"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteLocationPhotoRequest"
       responses:
         "400":
           description: "Bad Request"
@@ -8090,9 +8108,16 @@ paths:
         - name: "reason"
           in: "query"
           required: false
-          description: "Optional predefined removal reason. Forwarded to the author; not persisted."
+          deprecated: true
+          description: "Predefined removal reason. Superseded by the request body; kept for callers that predate it. Ignored when the body supplies a reason."
           schema:
             $ref: "#/components/schemas/ReviewRemovalReason"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteReviewRequest"
       responses:
         "200":
           description: "OK"
@@ -11700,6 +11725,16 @@ components:
           description: "Post-rating follow-up flow the client should show, derived from the rating\
             \ (1-2: SUGGEST_EDIT, 3: STANDARD, 4-5: PRAISE). Only set on review creation; null on\
             \ all other endpoints returning reviews."
+        removalReason:
+          type: "string"
+          nullable: true
+          description: "Predefined ReviewRemovalReason code a moderator attached when removing this\
+            \ review. Only ever populated on the moderator-only deleted-reviews endpoint, because\
+            \ every other read path filters out removed reviews."
+        removalReasonMessage:
+          type: "string"
+          nullable: true
+          description: "The moderator's own wording, set when removalReason is 'other'."
       required:
         - "id"
         - "rating"
@@ -13112,6 +13147,14 @@ components:
           allOf:
             - $ref: "#/components/schemas/UpdateLocationRequest"
           nullable: true
+        declineReason:
+          type: "string"
+          nullable: true
+          description: "Predefined ChangeRequestDeclineReason code a moderator gave when declining this request. Null on pending and approved requests."
+        declineReasonMessage:
+          type: "string"
+          nullable: true
+          description: "The moderator's own wording, set when declineReason is 'other'."
       required:
         - "id"
         - "changeRequestId"
@@ -13358,22 +13401,6 @@ components:
           type: "number"
           format: "double"
           nullable: true
-          description: "Length in metres"
-        height:
-          type: "integer"
-          format: "int32"
-          nullable: true
-          description: "Height in centimetres"
-        width:
-          type: "integer"
-          format: "int32"
-          nullable: true
-          description: "Width in centimetres"
-        weight:
-          type: "integer"
-          format: "int32"
-          nullable: true
-          description: "Weight in kilograms"
       required:
         - "brand"
         - "model"
@@ -13626,10 +13653,9 @@ components:
           type: "string"
           nullable: true
         motorhomeAssemblyYear:
-          type:
-            - "integer"
-            - "null"
+          type: "integer"
           format: "int32"
+          nullable: true
         motorhomeChassis:
           type: "string"
           nullable: true
@@ -13661,34 +13687,10 @@ components:
             - "RENT"
             - "BORROW"
             - "UNKNOWN"
-        # The five motorhome numbers below spell nullability as a 3.1 type union rather than `nullable: true`
-        # like the rest of this file. `nullable` is not a keyword in OpenAPI 3.1 and is silently dropped, so
-        # the generated client types would omit `| null` and forbid sending the explicit null that clears a
-        # stored value. The rest of the spec has the same flaw; correcting it wholesale is a separate change.
         motorhomeLength:
-          type:
-            - "number"
-            - "null"
+          type: "number"
           format: "double"
-          description: "Length in metres"
-        motorhomeHeight:
-          type:
-            - "integer"
-            - "null"
-          format: "int32"
-          description: "Height in centimetres"
-        motorhomeWidth:
-          type:
-            - "integer"
-            - "null"
-          format: "int32"
-          description: "Width in centimetres"
-        motorhomeWeight:
-          type:
-            - "integer"
-            - "null"
-          format: "int32"
-          description: "Weight in kilograms"
+          nullable: true
         isPrivate:
           type: "boolean"
           nullable: true
@@ -13785,6 +13787,9 @@ components:
         - "does_not_meet_criteria"
         - "merged_with_other_location"
         - "no_longer_accessible"
+        - "owner_does_not_want_listing"
+        - "new_owner_wants_new_listing"
+        - "other"
     ChangeRequestDeclineReason:
       type: "string"
       description: "Predefined reason for declining a change request. Forwarded to the contributor via the change_request_declined event; not persisted."
@@ -13795,6 +13800,7 @@ components:
         - "already_correct"
         - "evidence_required"
         - "out_of_scope"
+        - "other"
     RejectChangeRequestRequest:
       type: "object"
       description: "Optional body for rejecting a change request."
@@ -13804,6 +13810,43 @@ components:
           nullable: true
           allOf:
             - $ref: "#/components/schemas/ChangeRequestDeclineReason"
+        reasonMessage:
+          type: "string"
+          nullable: true
+          maxLength: 500
+          description: "Required when reason is 'other'. The moderator's own wording, forwarded to the contributor alongside the reason code; not persisted."
+    DeleteReviewRequest:
+      type: "object"
+      description: "Optional body for removing a review. reasonMessage is body-only on purpose: it is\
+        \ free text a moderator writes about why the review was removed and routinely quotes the\
+        \ personal data that caused the removal, so it must not travel in a URL that access logs\
+        \ capture."
+      properties:
+        reason:
+          type: "string"
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReviewRemovalReason"
+        reasonMessage:
+          type: "string"
+          nullable: true
+          maxLength: 500
+          description: "Required when reason is 'other'. Forwarded to the author alongside the reason code; not persisted."
+    DeleteLocationPhotoRequest:
+      type: "object"
+      description: "Optional body for deleting a user-uploaded photo. reasonMessage is body-only for\
+        \ the same reason as DeleteReviewRequest."
+      properties:
+        reason:
+          type: "string"
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PhotoDeletionReason"
+        reasonMessage:
+          type: "string"
+          nullable: true
+          maxLength: 500
+          description: "Required when reason is 'other'. Forwarded to the uploader alongside the reason code; not persisted."
     PhotoDeletionReason:
       type: "string"
       description: "Predefined reason for deleting a user-uploaded photo. Forwarded to the uploader via the PHOTO_DELETED event; not persisted."
@@ -13816,6 +13859,8 @@ components:
         - "promotional_content"
         - "copyright"
         - "wrong_location"
+        - "outdated"
+        - "other"
     ReviewRemovalReason:
       type: "string"
       description: "Predefined reason for removing a review. Forwarded to the author via the REVIEW_REMOVED event; not persisted."
@@ -13825,9 +13870,11 @@ components:
         - "not_based_on_visit"
         - "off_topic"
         - "contains_personal_data"
-        - "duplicate"
         - "conflict_of_interest"
         - "wrong_location"
+        - "requested_by_reviewer"
+        - "incomplete_no_text"
+        - "other"
     DiscountType:
       type: "string"
       description: "Discount card types accepted at the location."
