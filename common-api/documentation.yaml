@@ -4122,7 +4122,7 @@ paths:
                 type: "object"
   /v1/locations/{location_id}/notes/{note_id}:
     patch:
-      description: "PATCH /v1/locations/{location_id}/notes/{note_id} <br> Updates the text of a note. Requires authentication with roles: MODERATOR_CHIEF, CC_LOCATION_ADMIN, MODERATOR."
+      description: "PATCH /v1/locations/{location_id}/notes/{note_id} <br> Updates the text of a note. Returns 403 when the note is moderation-generated (isModerationGenerated), since a recorded moderation reason must not be rewritten. Requires authentication with roles: MODERATOR_CHIEF, CC_LOCATION_ADMIN, MODERATOR."
       parameters:
         - name: "location_id"
           in: "path"
@@ -4186,7 +4186,7 @@ paths:
               schema:
                 type: "object"
     delete:
-      description: "DELETE /v1/locations/{location_id}/notes/{note_id} <br> Deletes a note. Requires authentication with roles: MODERATOR_CHIEF, CC_LOCATION_ADMIN, MODERATOR."
+      description: "DELETE /v1/locations/{location_id}/notes/{note_id} <br> Deletes a note. Returns 403 when the note is moderation-generated (isModerationGenerated), since a recorded moderation reason must not be erased. Requires authentication with roles: MODERATOR_CHIEF, CC_LOCATION_ADMIN, MODERATOR."
       parameters:
         - name: "location_id"
           in: "path"
@@ -10948,12 +10948,16 @@ components:
         modified:
           type: string
           format: date-time
+        isModerationGenerated:
+          type: boolean
+          description: "True when the note records a moderation reason (photo removed, location declined or permanently closed). Such a note cannot be edited or deleted."
       required:
         - noteId
         - text
         - userName
         - created
         - modified
+        - isModerationGenerated
     AuditLogResponse:
       type: "object"
       properties:
