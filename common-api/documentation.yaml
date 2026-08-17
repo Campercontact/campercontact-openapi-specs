@@ -4803,7 +4803,7 @@ paths:
                 Example#2:
                   value: "500: Internal Server Error"
     patch:
-      description: "PUT /v1/me <br> Updates the profile of the currently authenticated\
+      description: "PATCH /v1/me <br> Updates the profile of the currently authenticated\
         \ user. <br> Requires the user to be authenticated. <br> Request Body: <br>\
         \ - UpdateUserRequest: The body containing the updated user data <br> Validation\
         \ Rules: <br> - **Email**: Must be a valid email address format <br> - **Username**:\
@@ -4812,9 +4812,13 @@ paths:
         \ minLength: 2, maxLength: 10 <br> - **Motorhome Assembly Year**: Must not\
         \ be in the future <br> ≤ current year <br> - **Camper Since**: Must not be\
         \ in the future <br> ≤ current year <br> - **Motorhome Length**: minimum:\
-        \ 2 meters, maximum: 18 meters, and max 2 decimals <br> - **aboutMe**: maxLength:\
-        \ 750 <br> Response: <br> - 200 OK: Returns the updated user profile in the\
-        \ response body"
+        \ 2 meters, maximum: 18 meters, and max 2 decimals <br> - **Motorhome Height**:\
+        \ minimum: 150 cm, maximum: 450 cm <br> - **Motorhome Width**: minimum: 150\
+        \ cm, maximum: 300 cm <br> - **Motorhome Weight**: minimum: 500 kg, maximum:\
+        \ 18000 kg <br> - **Clearing a field**: send an explicit `null` for assembly\
+        \ year, length, height, width or weight to remove the stored value; omitting\
+        \ the key leaves it unchanged <br> - **aboutMe**: maxLength: 750 <br> Response:\
+        \ <br> - 200 OK: Returns the updated user profile in the response body"
       requestBody:
         content:
           application/json:
@@ -6864,8 +6868,15 @@ paths:
         \ 2, maxLength: 10 <br> - **Motorhome Assembly Year**: Must not be in the\
         \ future <br> ≤ current year <br> - **Camper Since**: Must not be in the future\
         \ <br> ≤ current year <br> - **Motorhome Length**: minimum: 2 meters, maximum:\
-        \ 18 meters, and max 2 decimals <br> - **aboutMe**: maxLength: 750 <br> Response:\
-        \ <br> - 200 OK: Returns the updated user profile in the response body"
+        \ 18 meters, and max 2 decimals <br> - **Motorhome Height**: minimum: 150\
+        \ cm, maximum: 450 cm <br> - **Motorhome Width**: minimum: 150 cm, maximum:\
+        \ 300 cm <br> - **Motorhome Weight**: minimum: 500 kg, maximum: 18000 kg <br>\
+        \ - **Clearing a field**: send an explicit `null` for assembly year, length,\
+        \ height, width or weight to remove the stored value; omitting the key leaves\
+        \ it unchanged <br> - **aboutMe**: maxLength: 750 <br> - **showJourneys**:\
+        \ boolean field indicating whether to display user's journeys (default: false)\
+        \ <br> Response: <br> - 200 OK: Returns the updated user profile in the response\
+        \ body"
       parameters:
         - name: "firebaseUid"
           in: "path"
@@ -13406,6 +13417,22 @@ components:
           type: "number"
           format: "double"
           nullable: true
+          description: "Length in metres"
+        height:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          description: "Height in centimetres. Withheld (always null) on public profiles."
+        width:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          description: "Width in centimetres. Withheld (always null) on public profiles."
+        weight:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          description: "Weight in kilograms. Withheld (always null) on public profiles."
       required:
         - "brand"
         - "model"
@@ -13658,9 +13685,10 @@ components:
           type: "string"
           nullable: true
         motorhomeAssemblyYear:
-          type: "integer"
+          type:
+            - "integer"
+            - "null"
           format: "int32"
-          nullable: true
         motorhomeChassis:
           type: "string"
           nullable: true
@@ -13692,10 +13720,34 @@ components:
             - "RENT"
             - "BORROW"
             - "UNKNOWN"
+        # The five motorhome numbers below spell nullability as a 3.1 type union rather than `nullable: true`
+        # like the rest of this file. `nullable` is not a keyword in OpenAPI 3.1 and is silently dropped, so
+        # the generated client types would omit `| null` and forbid sending the explicit null that clears a
+        # stored value. The rest of the spec has the same flaw; correcting it wholesale is a separate change.
         motorhomeLength:
-          type: "number"
+          type:
+            - "number"
+            - "null"
           format: "double"
-          nullable: true
+          description: "Length in metres"
+        motorhomeHeight:
+          type:
+            - "integer"
+            - "null"
+          format: "int32"
+          description: "Height in centimetres"
+        motorhomeWidth:
+          type:
+            - "integer"
+            - "null"
+          format: "int32"
+          description: "Width in centimetres"
+        motorhomeWeight:
+          type:
+            - "integer"
+            - "null"
+          format: "int32"
+          description: "Weight in kilograms"
         isPrivate:
           type: "boolean"
           nullable: true
