@@ -4813,9 +4813,10 @@ paths:
         \ be in the future <br> ≤ current year <br> - **Camper Since**: Must not be\
         \ in the future <br> ≤ current year <br> - **Motorhome Length**: minimum:\
         \ 2 meters, maximum: 18 meters, and max 2 decimals <br> - **Motorhome Height**:\
-        \ minimum: 150 cm, maximum: 450 cm <br> - **Motorhome Width**: minimum: 150\
-        \ cm, maximum: 300 cm <br> - **Motorhome Weight**: minimum: 500 kg, maximum:\
-        \ 18000 kg <br> - **Clearing a field**: send an explicit `null` for assembly\
+        \ minimum: 1.5 meters, maximum: 4.5 meters, and max 2 decimals <br> - **Motorhome\
+        \ Width**: minimum: 1.5 meters, maximum: 3 meters, and max 2 decimals <br>\
+        \ - **Motorhome Weight**: minimum: 500 kg, maximum: 18000 kg <br> - **Clearing\
+        \ a field**: send an explicit `null` for assembly\
         \ year, length, height, width or weight to remove the stored value; omitting\
         \ the key leaves it unchanged <br> - **aboutMe**: maxLength: 750 <br> Response:\
         \ <br> - 200 OK: Returns the updated user profile in the response body"
@@ -6868,9 +6869,10 @@ paths:
         \ 2, maxLength: 10 <br> - **Motorhome Assembly Year**: Must not be in the\
         \ future <br> ≤ current year <br> - **Camper Since**: Must not be in the future\
         \ <br> ≤ current year <br> - **Motorhome Length**: minimum: 2 meters, maximum:\
-        \ 18 meters, and max 2 decimals <br> - **Motorhome Height**: minimum: 150\
-        \ cm, maximum: 450 cm <br> - **Motorhome Width**: minimum: 150 cm, maximum:\
-        \ 300 cm <br> - **Motorhome Weight**: minimum: 500 kg, maximum: 18000 kg <br>\
+        \ 18 meters, and max 2 decimals <br> - **Motorhome Height**: minimum: 1.5\
+        \ meters, maximum: 4.5 meters, and max 2 decimals <br> - **Motorhome Width**:\
+        \ minimum: 1.5 meters, maximum: 3 meters, and max 2 decimals <br> - **Motorhome\
+        \ Weight**: minimum: 500 kg, maximum: 18000 kg <br>\
         \ - **Clearing a field**: send an explicit `null` for assembly year, length,\
         \ height, width or weight to remove the stored value; omitting the key leaves\
         \ it unchanged <br> - **aboutMe**: maxLength: 750 <br> - **showJourneys**:\
@@ -13381,10 +13383,16 @@ components:
           type: "string"
         type:
           type: "string"
+        # The five motorhome numbers here spell nullability as a 3.1 type union rather than `nullable: true`
+        # like the rest of this file, for the same reason as on UpdateUserRequest: `nullable` is not a 3.1
+        # keyword and is silently dropped, so the generated client would type these as never-null. They really
+        # are null — every one is empty until the owner fills it in, can be cleared again, and the private
+        # dimensions are nulled out on public profiles.
         assemblyYear:
-          type: "integer"
+          type:
+            - "integer"
+            - "null"
           format: "int32"
-          nullable: true
         chassis:
           type: "string"
           enum:
@@ -13414,24 +13422,28 @@ components:
             - "BORROW"
             - "UNKNOWN"
         length:
-          type: "number"
+          type:
+            - "number"
+            - "null"
           format: "double"
-          nullable: true
           description: "Length in metres"
         height:
-          type: "integer"
-          format: "int32"
-          nullable: true
-          description: "Height in centimetres. Withheld (always null) on public profiles."
+          type:
+            - "number"
+            - "null"
+          format: "double"
+          description: "Height in metres. Withheld (always null) on public profiles."
         width:
-          type: "integer"
-          format: "int32"
-          nullable: true
-          description: "Width in centimetres. Withheld (always null) on public profiles."
+          type:
+            - "number"
+            - "null"
+          format: "double"
+          description: "Width in metres. Withheld (always null) on public profiles."
         weight:
-          type: "integer"
+          type:
+            - "integer"
+            - "null"
           format: "int32"
-          nullable: true
           description: "Weight in kilograms. Withheld (always null) on public profiles."
       required:
         - "brand"
@@ -13732,16 +13744,16 @@ components:
           description: "Length in metres"
         motorhomeHeight:
           type:
-            - "integer"
+            - "number"
             - "null"
-          format: "int32"
-          description: "Height in centimetres"
+          format: "double"
+          description: "Height in metres"
         motorhomeWidth:
           type:
-            - "integer"
+            - "number"
             - "null"
-          format: "int32"
-          description: "Width in centimetres"
+          format: "double"
+          description: "Width in metres"
         motorhomeWeight:
           type:
             - "integer"
