@@ -11169,6 +11169,11 @@ components:
       properties:
         displayName:
           type: "string"
+        slug:
+          type: "string"
+          nullable: true
+          description: "URL-friendly handle for the author's profile, e.g. /users/{slug}. Recomputed from\
+            \ the display name, so it can be null when that has no slug-safe characters."
         profilePhoto:
           nullable: true
           $ref: "#/components/schemas/MediaResponse"
@@ -13555,6 +13560,11 @@ components:
           type: "string"
         username:
           type: "string"
+        slug:
+          type: "string"
+          nullable: true
+          description: "URL-friendly profile handle, e.g. /users/{slug}. Null for users the slug backfill\
+            \ has not reached yet - fall back to the username in that case."
         firebaseUid:
           type: "string"
         personalData:
@@ -13582,6 +13592,11 @@ components:
       properties:
         username:
           type: "string"
+        slug:
+          type: "string"
+          nullable: true
+          description: "URL-friendly profile handle, e.g. /users/{slug}. Null for users the slug backfill\
+            \ has not reached yet - fall back to the username in that case."
         personalData:
           $ref: "#/components/schemas/PublicPersonalData"
         entitlements:
