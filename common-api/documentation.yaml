@@ -4243,6 +4243,45 @@ paths:
             '*/*':
               schema:
                 type: "object"
+  /v1/locations/basic-info:
+    post:
+      description: "POST /v1/locations/basic-info <br> Adds a new location from only\
+        \ the first form page (\"Name and Location\" \u2014 Save & Exit). Prices, properties\
+        \ and limits are left empty for moderators to complete. Requires the user to\
+        \ be authenticated. <br> Request Body: <br> - CreateNewLocationRequest.BasicInfo:\
+        \ The basic information for the new location. <br> Response: <br> - 200 OK:\
+        \ Location was added successfully."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BasicInfo"
+        required: true
+      responses:
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Unauthorized"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AddLocationResponse"
   /v1/locations/validate/basic-info:
     post:
       description: "POST /v1/locations/validate/basic-info <br> Validates the basic\
@@ -12955,14 +12994,18 @@ components:
         - "type"
     Limits:
       type: "object"
+      description: "Capacity and stay restrictions. All fields are optional: users may skip them in the new-campsite form and moderators complete them later."
       properties:
         maxCapacity:
           type: "integer"
           format: "int32"
+          nullable: true
         maxStayHours:
           type: "string"
+          nullable: true
         maxCamperLengthMeters:
           type: "string"
+          nullable: true
         maxStayEnum:
           type: "string"
           nullable: true
@@ -12992,10 +13035,6 @@ components:
             - "METER_10"
             - "METER_11"
             - "METER_12"
-      required:
-        - "maxCapacity"
-        - "maxStayHours"
-        - "maxCamperLengthMeters"
     Properties:
       type: "object"
       properties:
@@ -13017,7 +13056,6 @@ components:
         - "amenities"
         - "surroundings"
         - "terrains"
-        - "limits"
     CreateNewLocationRequest:
       type: "object"
       properties:
