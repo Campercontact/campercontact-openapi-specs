@@ -4243,45 +4243,6 @@ paths:
             '*/*':
               schema:
                 type: "object"
-  /v1/locations/basic-info:
-    post:
-      description: "POST /v1/locations/basic-info <br> Adds a new location from only\
-        \ the first form page (\"Name and Location\" \u2014 Save & Exit). Prices, properties\
-        \ and limits are left empty for moderators to complete. Requires the user to\
-        \ be authenticated. <br> Request Body: <br> - CreateNewLocationRequest.BasicInfo:\
-        \ The basic information for the new location. <br> Response: <br> - 200 OK:\
-        \ Location was added successfully."
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/BasicInfo"
-        required: true
-      responses:
-        "400":
-          description: "Bad Request"
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: "Unauthorized"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-        "500":
-          description: "Internal Server Error"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-        "200":
-          description: "OK"
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/AddLocationResponse"
   /v1/locations/validate/basic-info:
     post:
       description: "POST /v1/locations/validate/basic-info <br> Validates the basic\
@@ -11719,17 +11680,6 @@ components:
         createdAt:
           type: "string"
           nullable: true
-        metadata:
-          nullable: true
-          type: "object"
-          description: "Additive facts about the media item. Null when none apply."
-          properties:
-            manuallyOrderedAt:
-              type: "string"
-              format: "date-time"
-              nullable: true
-              description: "When a moderator last dragged this item into position. Null when its order\
-                \ has only ever been assigned automatically."
       required:
         - "id"
         - "order"
@@ -12784,6 +12734,9 @@ components:
           format: "int64"
         mediaDisplayType:
           type: "string"
+          description: "What the media is, within its entity. On POST /v1/me/request-upload the values are\
+            \ 'user_profile' for the avatar and 'user_motorhome' for the motorhome photo. A motorhome has\
+            \ only one photo: confirming a 'user_motorhome' upload deletes the one it replaces."
       required:
         - "contentType"
         - "contentLength"
@@ -13005,18 +12958,14 @@ components:
         - "type"
     Limits:
       type: "object"
-      description: "Capacity and stay restrictions. All fields are optional: users may skip them in the new-campsite form and moderators complete them later."
       properties:
         maxCapacity:
           type: "integer"
           format: "int32"
-          nullable: true
         maxStayHours:
           type: "string"
-          nullable: true
         maxCamperLengthMeters:
           type: "string"
-          nullable: true
         maxStayEnum:
           type: "string"
           nullable: true
@@ -13046,6 +12995,10 @@ components:
             - "METER_10"
             - "METER_11"
             - "METER_12"
+      required:
+        - "maxCapacity"
+        - "maxStayHours"
+        - "maxCamperLengthMeters"
     Properties:
       type: "object"
       properties:
@@ -13067,6 +13020,7 @@ components:
         - "amenities"
         - "surroundings"
         - "terrains"
+        - "limits"
     CreateNewLocationRequest:
       type: "object"
       properties:
@@ -13437,6 +13391,12 @@ components:
           type: "string"
         type:
           type: "string"
+        licensePlate:
+          type:
+            - "string"
+            - "null"
+          description: "Registration plate. Withheld (always null) on public profiles — only the owner\
+            \ receives it."
         # The five motorhome numbers here spell nullability as a 3.1 type union rather than `nullable: true`
         # like the rest of this file, for the same reason as on UpdateUserRequest: `nullable` is not a 3.1
         # keyword and is silently dropped, so the generated client would type these as never-null. They really
@@ -13499,6 +13459,10 @@ components:
             - "null"
           format: "int32"
           description: "Weight in kilograms. Withheld (always null) on public profiles."
+        picture:
+          nullable: true
+          $ref: "#/components/schemas/MediaResponse"
+          description: "Photo of the motorhome. Returned on public profiles as well."
       required:
         - "brand"
         - "model"
@@ -13760,6 +13724,12 @@ components:
         motorhomeType:
           type: "string"
           nullable: true
+        motorhomeLicensePlate:
+          type: "string"
+          nullable: true
+          maxLength: 20
+          description: "Registration plate, at most 20 characters. Send an empty string to clear it; omit\
+            \ the key to leave it unchanged."
         motorhomeAssemblyYear:
           type:
             - "integer"
