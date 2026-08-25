@@ -1271,8 +1271,10 @@ paths:
   /v1/bookings:
     get:
       description: "GET /v1/bookings <br> Retrieves bookings for the currently authenticated\
-        \ user. <br> Requires the user to be authenticated. <br> Response: <br> -\
-        \ 200 OK: A list of bookings for the authenticated user."
+        \ user. <br> Requires the user to be authenticated. <br> Bookings are returned\
+        \ ordered for display: upcoming ones first by earliest arrival, then the rest\
+        \ by most recent departure. Use isUpcoming to group them. <br> Response: <br>\
+        \ - 200 OK: A list of bookings for the authenticated user."
       responses:
         "400":
           description: "Bad Request"
@@ -11567,6 +11569,12 @@ components:
           type: "string"
         status:
           type: "string"
+        isUpcoming:
+          type: "boolean"
+          description: "Whether the stay has not finished yet, i.e. departureDate is\
+            \ today or later in Europe/Amsterdam. Group the list on this rather than\
+            \ comparing dates client-side, so every client agrees on which section a\
+            \ booking belongs to."
       required:
         - "id"
         - "arrivalDate"
@@ -11574,6 +11582,7 @@ components:
         - "formattedPrice"
         - "rentalUnitName"
         - "status"
+        - "isUpcoming"
     CreateCartRequest:
       type: "object"
       description: "Request to create a booking cart with pre-filled dates and guest\
