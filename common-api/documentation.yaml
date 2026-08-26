@@ -12793,6 +12793,9 @@ components:
           format: "int64"
         mediaDisplayType:
           type: "string"
+          description: "What the media is, within its entity. On POST /v1/me/request-upload the values are\
+            \ 'user_profile' for the avatar and 'user_motorhome' for the motorhome photo. A motorhome has\
+            \ only one photo: confirming a 'user_motorhome' upload deletes the one it replaces."
       required:
         - "contentType"
         - "contentLength"
@@ -13446,6 +13449,12 @@ components:
           type: "string"
         type:
           type: "string"
+        licensePlate:
+          type:
+            - "string"
+            - "null"
+          description: "Registration plate. Null when the owner never set one, and withheld (always null)\
+            \ on public profiles — only the owner receives it."
         # The five motorhome numbers here spell nullability as a 3.1 type union rather than `nullable: true`
         # like the rest of this file, for the same reason as on UpdateUserRequest: `nullable` is not a 3.1
         # keyword and is silently dropped, so the generated client would type these as never-null. They really
@@ -13508,6 +13517,11 @@ components:
             - "null"
           format: "int32"
           description: "Weight in kilograms. Withheld (always null) on public profiles."
+        picture:
+          oneOf:
+            - $ref: "#/components/schemas/MediaResponse"
+            - type: "null"
+          description: "Photo of the motorhome. Returned on public profiles as well."
       required:
         - "brand"
         - "model"
@@ -13769,6 +13783,12 @@ components:
         motorhomeType:
           type: "string"
           nullable: true
+        motorhomeLicensePlate:
+          type: "string"
+          nullable: true
+          maxLength: 20
+          description: "Registration plate, at most 20 characters. Stored trimmed, so a blank string clears\
+            \ it just like an empty one; omit the key to leave it unchanged."
         motorhomeAssemblyYear:
           type:
             - "integer"
