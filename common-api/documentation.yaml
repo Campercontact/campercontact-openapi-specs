@@ -12156,7 +12156,7 @@ components:
             en: "Beautiful camping location"
             de: "Schöner Campingplatz"
         type:
-          type: "string"
+          $ref: "#/components/schemas/LocationType"
           nullable: true
         addressStreet:
           type: "string"
@@ -12758,7 +12758,7 @@ components:
         isClaimed:
           type: "boolean"
         type:
-          type: "string"
+          $ref: "#/components/schemas/LocationType"
         status:
           $ref: "#/components/schemas/LocationStatus"
           nullable: true
@@ -13027,7 +13027,7 @@ components:
         description:
           type: "string"
         type:
-          type: "string"
+          $ref: "#/components/schemas/LocationType"
         address:
           $ref: "#/components/schemas/Address"
         location:
@@ -14026,6 +14026,19 @@ components:
           type: "string"
       required:
         - "shareableLink"
+    LocationType:
+      type: "string"
+      description: "Location category, serialized from LocationType.code. 'camperplace' is the canonical\
+        \ code for a camper place; the legacy 'campsite' alias is still accepted on input but never\
+        \ emitted in responses."
+      enum:
+        - "poi"
+        - "camperplace"
+        - "serviceplace"
+        - "camping"
+        - "company"
+        - "microcamping"
+        - "parking"
     LocationStatus:
       type: "string"
       description: "Possible location statuses."
