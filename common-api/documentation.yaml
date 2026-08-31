@@ -12832,6 +12832,14 @@ components:
           description: "What the media is, within its entity. On POST /v1/me/request-upload the values are\
             \ 'user_profile' for the avatar and 'user_motorhome' for the motorhome photo. A motorhome has\
             \ only one photo: confirming a 'user_motorhome' upload deletes the one it replaces."
+        source:
+          type: "string"
+          nullable: true
+          enum:
+            - "qenner"
+          description: "External system the media originates from. Setting it stores the media without\
+            \ uploader attribution, so no username is ever shown for it. Only moderators and location\
+            \ admins may set this; other callers receive a 403."
       required:
         - "contentType"
         - "contentLength"
