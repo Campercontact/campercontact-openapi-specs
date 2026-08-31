@@ -11559,6 +11559,14 @@ components:
       properties:
         id:
           type: "string"
+          description: "Travelbase's internal reference for the booking. Not guest-facing\
+            \ — show bookingNumber instead."
+        bookingNumber:
+          type: "string"
+          nullable: true
+          description: "The guest-facing booking reference, which guests are asked for\
+            \ on arrival and support uses to find a booking. Null when Travelbase has\
+            \ not assigned one to the order."
         arrivalDate:
           type: "string"
         departureDate:
@@ -11567,6 +11575,39 @@ components:
           type: "string"
         rentalUnitName:
           type: "string"
+          description: "The rental unit's actual name. Previously this returned Travelbase's\
+            \ marketing tagline, which arrived as values like 'Camperplaats CAMPERPLAATS\
+            \ 57-60M²'. Empty when the booking has no rental unit."
+        accommodationSlug:
+          type: "string"
+          nullable: true
+          description: "Travelbase's slug for the accommodation, which is the Campercontact\
+            \ sitecode — use it to link a booking to its location. Null when the booking\
+            \ has no rental unit, which Travelbase permits."
+        accommodationName:
+          type: "string"
+          nullable: true
+          description: "The campsite's name — what the guest recognises the booking by.\
+            \ Null when the booking has no rental unit."
+        accommodationPlace:
+          type: "string"
+          nullable: true
+          description: "The town the campsite is in. Null when the booking has no rental\
+            \ unit."
+        accommodationCountry:
+          type: "string"
+          nullable: true
+          description: "The campsite's country, already resolved to a name in the language\
+            \ of the Accept-Language header — 'Netherlands' in English, 'Nederland' in\
+            \ Dutch. Null when the booking has no rental unit, or when Travelbase sent\
+            \ a country code the JDK does not recognise."
+        thumbnailUrl:
+          type: "string"
+          nullable: true
+          description: "A listing-sized image of the rental unit, for the booking card.\
+            \ Null when the booking has no rental unit."
+        guests:
+          $ref: "#/components/schemas/BookingGuestsResponse"
         status:
           type: "string"
           description: "Travelbase's status, mapped onto our own enum: recognised values\
@@ -11613,12 +11654,41 @@ components:
             \ booking belongs to."
       required:
         - "id"
+        - "bookingNumber"
         - "arrivalDate"
         - "departureDate"
         - "formattedPrice"
         - "rentalUnitName"
+        - "accommodationSlug"
+        - "accommodationName"
+        - "accommodationPlace"
+        - "accommodationCountry"
+        - "thumbnailUrl"
+        - "guests"
         - "status"
+        - "displayStatus"
         - "isUpcoming"
+    BookingGuestsResponse:
+      type: "object"
+      description: "The travel party as counts rather than a formatted string, because\
+        \ pluralisation differs per language — compose the sentence client-side."
+      properties:
+        adults:
+          type: "integer"
+        youths:
+          type: "integer"
+        children:
+          type: "integer"
+        babies:
+          type: "integer"
+        pets:
+          type: "integer"
+      required:
+        - "adults"
+        - "youths"
+        - "children"
+        - "babies"
+        - "pets"
     CreateCartRequest:
       type: "object"
       description: "Request to create a booking cart with pre-filled dates and guest\
