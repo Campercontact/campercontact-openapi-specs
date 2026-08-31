@@ -11569,6 +11569,42 @@ components:
           type: "string"
         status:
           type: "string"
+          description: "Travelbase's status, mapped onto our own enum: recognised values\
+            \ pass through unchanged, anything else becomes 'unknown' — so a status Travelbase\
+            \ adds later arrives as 'unknown' rather than verbatim. Use displayStatus\
+            \ to decide what to show; this is kept for analytics and for clients that\
+            \ have not migrated."
+          enum:
+            - "init"
+            - "pending"
+            - "accepted"
+            - "declined"
+            - "cancelled_guest"
+            - "cancelled_partner"
+            - "cancelled_external"
+            - "waived"
+            - "no_show"
+            - "unknown"
+        displayStatus:
+          type: "string"
+          nullable: true
+          description: "How the booking should be presented, which is not always the\
+            \ status Travelbase stores. Travelbase has no notion of a stay being finished\
+            \ or a request having lapsed, so completed and expired are resolved here\
+            \ from the dates, in Europe/Amsterdam — a client comparing the dates itself\
+            \ would disagree for several hours a day. Null when the status has no user-facing\
+            \ meaning (init, waived, or anything Travelbase adds later), in which case\
+            \ show no status line."
+          enum:
+            - "confirmed"
+            - "completed"
+            - "awaiting_confirmation"
+            - "expired"
+            - "declined"
+            - "cancelled_guest"
+            - "cancelled_partner"
+            - "cancelled_external"
+            - "no_show"
         isUpcoming:
           type: "boolean"
           description: "Whether the stay has not finished yet, i.e. departureDate is\
