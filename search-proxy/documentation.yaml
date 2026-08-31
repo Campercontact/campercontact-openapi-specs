@@ -125,6 +125,7 @@ paths:
         Set includePois to false to exclude POI results. Set includeOsmTypes to true to also include all additional OSM geo types (e.g. tourism, leisure, amenity).
       parameters:
         - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/xFeatureFlags'
         - in: query
           name: query
           required: true
@@ -521,11 +522,19 @@ components:
     xFeatureFlags:
       name: x-feature-flags
       in: header
-      description: The feature flags to enable
+      description: |
+        The feature flags to enable, comma-separated (e.g. "microcamping,parking").
+        This enum only documents which values the client may send — whether a
+        given flag actually changes behavior is decided by the lambda's Flags
+        registry (src/utils/featureFlags.ts), not by this schema.
       required: false
+      style: simple
+      explode: false
       schema:
-        type: string
-        enum: [microcamping]
+        type: array
+        items:
+          type: string
+          enum: [microcamping, parking]
     offset:
       name: offset
       in: query
@@ -586,7 +595,7 @@ components:
         type: array
         items:
           type: string
-          enum: [camping, camperplace, serviceplace, microcamping]
+          enum: [camping, camperplace, serviceplace, microcamping, parking]
     filter.isBookable:
       name: isBookable
       in: query
@@ -1105,7 +1114,7 @@ components:
             type: integer
           type:
             type: string
-            enum: [camping, camperplace, serviceplace, microcamping]
+            enum: [camping, camperplace, serviceplace, microcamping, parking]
           rating:
             type: integer
             description: Average rating of the location
@@ -1174,7 +1183,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [camping, camperplace, serviceplace]
+          enum: [camping, camperplace, serviceplace, parking]
     PlaceSuggestion:
       type: object
       description: A geo suggestion from Photon (OpenStreetMap geocoder). By default cities, regions and countries are returned. Additional types can be included via the includeOsmTypes parameter.
