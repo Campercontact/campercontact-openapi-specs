@@ -11213,8 +11213,15 @@ components:
         slug:
           type: "string"
           nullable: true
-          description: "URL-friendly handle for the author's profile, e.g. /users/{slug}. Recomputed from\
-            \ the display name, so it can be null when that has no slug-safe characters."
+          description: "Canonical handle for the author's profile, e.g. /users/{slug}. Null when the profile\
+            \ cannot be linked to, and null while the slug backfill has not reached this author — fall back\
+            \ to username then. Never build a link from displayName."
+        username:
+          type: "string"
+          nullable: true
+          description: "The author's current username, usable as a profile handle until they have a slug.\
+            \ Null when the review has no author row, when that row's name is blank, and when the profile\
+            \ is deleted."
         profilePhoto:
           nullable: true
           $ref: "#/components/schemas/MediaResponse"
