@@ -10794,14 +10794,6 @@ components:
           nullable: true
           description: "URL to the author's profile photo"
           example: "https://images.example.com/users/profile-photo.jpg"
-        slug:
-          type: string
-          nullable: true
-          description: "Canonical handle for the author's profile, e.g. /users/{slug}. Null while the slug\
-            \ backfill has not reached them. The author is always read from the users row, so displayName\
-            \ is their current username and can be used as the handle when slug is null. Do not take the\
-            \ handle from the journey permalink: its first segment is frozen at creation and goes stale on\
-            \ rename."
       required:
         - userId
     JourneyUploadRequest:
@@ -11221,15 +11213,8 @@ components:
         slug:
           type: "string"
           nullable: true
-          description: "Canonical handle for the author's profile, e.g. /users/{slug}. Null while the slug\
-            \ backfill has not reached this author, and null for an anonymized profile — fall back to\
-            \ username then. Never build a link from displayName."
-        username:
-          type: "string"
-          nullable: true
-          description: "The author's current username, usable as a profile handle until they have a slug.\
-            \ Null when the review has no author row and when that row's name is blank — a snapshot name is\
-            \ not a handle."
+          description: "URL-friendly handle for the author's profile, e.g. /users/{slug}. Recomputed from\
+            \ the display name, so it can be null when that has no slug-safe characters."
         profilePhoto:
           nullable: true
           $ref: "#/components/schemas/MediaResponse"
@@ -11832,21 +11817,12 @@ components:
         submittedBy:
           nullable: true
           type: "object"
-          description: "Who submitted this media item, resolved from their users row. Null when the item has\
-            \ no submitter, which is the case for media imported from an external source."
           properties:
             displayName:
               type: "string"
             profilePictureUrl:
               type: "string"
               nullable: true
-            slug:
-              type: "string"
-              nullable: true
-              description: "Canonical handle for the submitter's profile, e.g. /users/{slug}. Null while the\
-                \ slug backfill has not reached them, and null for an anonymized profile. Media carries no\
-                \ stored copy of the submitter's name, so displayName is their current username and can be\
-                \ used as the handle when slug is null."
           required:
             - "displayName"
         createdAt:
@@ -14511,15 +14487,7 @@ components:
         profilePicture:
           nullable: true
           $ref: "#/components/schemas/MediaResponse"
-        slug:
-          type: "string"
-          nullable: true
-          description: "Canonical handle for the owner's profile, e.g. /users/{slug}. Null while the slug\
-            \ backfill has not reached them. Distinct from the list's own slug on the enclosing response.\
-            \ The owner is always read from the users row, so displayName is their current username and\
-            \ can be used as the handle when slug is null."
       required:
-        - "userId"
         - "displayName"
     PublicFavoriteLocationListResponse:
       type: "object"
