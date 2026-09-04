@@ -3446,7 +3446,7 @@ paths:
                 $ref: "#/components/schemas/LocationResponse"
   /v1/locations/{sitecode}/change-requests:
     post:
-      description: "POST /v1/locations/{sitecode}/change-requests <br> Creates a change request for a location. <br> Requires authentication. <br> A price submission proposes the currency of the whole table through the amounts it carries: the first period's rate.currency is taken as the requested currency, so resubmitting unchanged amounts in another currency is a currency change. <br> Request Body: <br> - CreateChangeRequest. <br> Response: <br> - 200 OK: List of created change requests."
+      description: "POST /v1/locations/{sitecode}/change-requests <br> Creates a change request for a location. <br> Requires authentication. <br> Request Body: <br> - CreateChangeRequest. <br> Response: <br> - 200 OK: List of created change requests."
       parameters:
         - name: "sitecode"
           in: "path"
