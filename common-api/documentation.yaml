@@ -3446,7 +3446,7 @@ paths:
                 $ref: "#/components/schemas/LocationResponse"
   /v1/locations/{sitecode}/change-requests:
     post:
-      description: "POST /v1/locations/{sitecode}/change-requests <br> Creates a change request for a location. <br> Requires authentication. <br> Request Body: <br> - CreateChangeRequest. <br> Response: <br> - 200 OK: List of created change requests."
+      description: "POST /v1/locations/{sitecode}/change-requests <br> Creates a change request for a location. <br> Requires authentication. <br> A price submission proposes the currency of the whole table through the amounts it carries: the first period's rate.currency is taken as the requested currency, so resubmitting unchanged amounts in another currency is a currency change. <br> Request Body: <br> - CreateChangeRequest. <br> Response: <br> - 200 OK: List of created change requests."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -11559,6 +11559,13 @@ components:
       properties:
         id:
           type: "string"
+          description: "Travelbase's internal reference for the booking. Not guest-facing\
+            \ — show bookingNumber instead."
+        bookingNumber:
+          type: ["string", "null"]
+          description: "The guest-facing booking reference, which guests are asked for\
+            \ on arrival and support uses to find a booking. Null when Travelbase has\
+            \ not assigned one to the order."
         arrivalDate:
           type: "string"
         departureDate:
@@ -11567,6 +11574,34 @@ components:
           type: "string"
         rentalUnitName:
           type: "string"
+          description: "The rental unit's actual name. Previously this returned Travelbase's\
+            \ marketing tagline, which arrived as values like 'Camperplaats CAMPERPLAATS\
+            \ 57-60M²'. Empty when the booking has no rental unit."
+        accommodationSlug:
+          type: ["string", "null"]
+          description: "Travelbase's slug for the accommodation, which is the Campercontact\
+            \ sitecode — use it to link a booking to its location. Null when the booking\
+            \ has no rental unit, which Travelbase permits."
+        accommodationName:
+          type: ["string", "null"]
+          description: "The campsite's name — what the guest recognises the booking by.\
+            \ Null when the booking has no rental unit."
+        accommodationPlace:
+          type: ["string", "null"]
+          description: "The town the campsite is in. Null when the booking has no rental\
+            \ unit."
+        accommodationCountry:
+          type: ["string", "null"]
+          description: "The campsite's country, already resolved to a name in the language\
+            \ of the Accept-Language header — 'Netherlands' in English, 'Nederland' in\
+            \ Dutch. Null when the booking has no rental unit, or when Travelbase sent\
+            \ a country code the JDK does not recognise."
+        thumbnailUrl:
+          type: ["string", "null"]
+          description: "A listing-sized image of the rental unit, for the booking card.\
+            \ Null when the booking has no rental unit."
+        guests:
+          $ref: "#/components/schemas/BookingGuestsResponse"
         status:
           type: "string"
           description: "Travelbase's status, mapped onto our own enum: recognised values\
@@ -11586,8 +11621,7 @@ components:
             - "no_show"
             - "unknown"
         displayStatus:
-          type: "string"
-          nullable: true
+          type: ["string", "null"]
           description: "How the booking should be presented, which is not always the\
             \ status Travelbase stores. Travelbase has no notion of a stay being finished\
             \ or a request having lapsed, so completed and expired are resolved here\
@@ -11605,6 +11639,7 @@ components:
             - "cancelled_partner"
             - "cancelled_external"
             - "no_show"
+            - null
         isUpcoming:
           type: "boolean"
           description: "Whether the stay has not finished yet, i.e. departureDate is\
@@ -11613,12 +11648,41 @@ components:
             \ booking belongs to."
       required:
         - "id"
+        - "bookingNumber"
         - "arrivalDate"
         - "departureDate"
         - "formattedPrice"
         - "rentalUnitName"
+        - "accommodationSlug"
+        - "accommodationName"
+        - "accommodationPlace"
+        - "accommodationCountry"
+        - "thumbnailUrl"
+        - "guests"
         - "status"
+        - "displayStatus"
         - "isUpcoming"
+    BookingGuestsResponse:
+      type: "object"
+      description: "The travel party as counts rather than a formatted string, because\
+        \ pluralisation differs per language — compose the sentence client-side."
+      properties:
+        adults:
+          type: "integer"
+        youths:
+          type: "integer"
+        children:
+          type: "integer"
+        babies:
+          type: "integer"
+        pets:
+          type: "integer"
+      required:
+        - "adults"
+        - "youths"
+        - "children"
+        - "babies"
+        - "pets"
     CreateCartRequest:
       type: "object"
       description: "Request to create a booking cart with pre-filled dates and guest\
@@ -12092,7 +12156,7 @@ components:
             en: "Beautiful camping location"
             de: "Schöner Campingplatz"
         type:
-          type: "string"
+          $ref: "#/components/schemas/LocationType"
           nullable: true
         addressStreet:
           type: "string"
@@ -12694,7 +12758,7 @@ components:
         isClaimed:
           type: "boolean"
         type:
-          type: "string"
+          $ref: "#/components/schemas/LocationType"
         status:
           $ref: "#/components/schemas/LocationStatus"
           nullable: true
@@ -12963,7 +13027,7 @@ components:
         description:
           type: "string"
         type:
-          type: "string"
+          $ref: "#/components/schemas/LocationType"
         address:
           $ref: "#/components/schemas/Address"
         location:
@@ -13962,6 +14026,19 @@ components:
           type: "string"
       required:
         - "shareableLink"
+    LocationType:
+      type: "string"
+      description: "Location category, serialized from LocationType.code. 'camperplace' is the canonical\
+        \ code for a camper place; the legacy 'campsite' alias is still accepted on input but never\
+        \ emitted in responses."
+      enum:
+        - "poi"
+        - "camperplace"
+        - "serviceplace"
+        - "camping"
+        - "company"
+        - "microcamping"
+        - "parking"
     LocationStatus:
       type: "string"
       description: "Possible location statuses."
