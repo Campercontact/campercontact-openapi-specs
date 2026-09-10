@@ -6923,6 +6923,8 @@ paths:
         \ height, width or weight to remove the stored value; omitting the key leaves\
         \ it unchanged <br> - **aboutMe**: maxLength: 750 <br> - **showJourneys**:\
         \ boolean field indicating whether to display user's journeys (default: false)\
+        \ <br> - **showNavigation**: boolean field indicating whether in-app navigation is\
+        \ enabled for the user (default: false)\
         \ <br> Response: <br> - 200 OK: Returns the updated user profile in the response\
         \ body"
       parameters:
@@ -13888,10 +13890,15 @@ components:
           type: "boolean"
           default: false
           description: "Indicates whether to display user's journeys. Only updateable by administrators."
+        showNavigation:
+          type: "boolean"
+          default: false
+          description: "Indicates whether in-app navigation is enabled for the user. Only updateable by administrators."
       required:
         - "isStripeCustomerPortal"
         - "numberOfFavorites"
         - "showJourneys"
+        - "showNavigation"
     UserProfileResponse:
       type: "object"
       properties:
@@ -14129,6 +14136,10 @@ components:
           type: "boolean"
           nullable: true
           description: "Controls whether to display user's journeys. Only updateable by administrators via moderate endpoints."
+        showNavigation:
+          type: "boolean"
+          nullable: true
+          description: "Controls whether in-app navigation is enabled for the user. Only updateable by administrators via moderate endpoints."
     FavoriteLocationListResponse:
       type: "object"
       properties:
