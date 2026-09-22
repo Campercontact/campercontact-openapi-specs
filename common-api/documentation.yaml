@@ -12284,16 +12284,14 @@ components:
         to:
           $ref: "#/components/schemas/DayOfYear"
         rate:
-          nullable: true
-          allOf:
-            - $ref: "#/components/schemas/AmountRequest"
+          $ref: "#/components/schemas/AmountRequest"
         taxRate:
-          nullable: true
-          allOf:
-            - $ref: "#/components/schemas/AmountRequest"
+          $ref: "#/components/schemas/AmountRequest"
       required:
         - "from"
         - "to"
+        - "rate"
+        - "taxRate"
     MediaRequest:
       type: "object"
       properties:
@@ -13414,16 +13412,14 @@ components:
         to:
           $ref: "#/components/schemas/DayOfYear"
         rate:
-          nullable: true
-          allOf:
-            - $ref: "#/components/schemas/AmountRequest"
+          $ref: "#/components/schemas/AmountRequest"
         taxRate:
-          nullable: true
-          allOf:
-            - $ref: "#/components/schemas/AmountRequest"
+          $ref: "#/components/schemas/AmountRequest"
       required:
         - "from"
         - "to"
+        - "rate"
+        - "taxRate"
     CreateChangeRequest:
       type: "object"
       properties:
