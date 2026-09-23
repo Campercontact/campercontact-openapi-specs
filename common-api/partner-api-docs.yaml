@@ -30,11 +30,8 @@ paths:
         and stored immediately; the Travelbase listing provisions asynchronously, so the location
         starts non-bookable. Photos travel as partner-hosted URLs in `media` — send them from day
         one so payloads never change, but they are not processed yet: photo ingest ships as a
-        follow-up. Requires the supply capability; the calling partner is identified by its
-        write secret in the X-Partner-Secret header. Rental units are not yet part of this
+        follow-up. Requires the supply capability. Rental units are not yet part of this
         contract.
-      parameters:
-        - $ref: '#/components/parameters/PartnerSecretHeader'
       requestBody:
         required: true
         content:
@@ -50,12 +47,6 @@ paths:
                 $ref: '#/components/schemas/PartnerCreateLocationResponse'
         '400':
           description: Invalid payload (missing required fields, unknown enum codes, duplicate name within 500 m)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Missing or unknown partner identity
           content:
             application/json:
               schema:
@@ -151,7 +142,6 @@ paths:
         isActive=false; there is no DELETE. Another partner's externalId behaves as absent (404),
         so existence cannot be probed.
       parameters:
-        - $ref: '#/components/parameters/PartnerSecretHeader'
         - name: sitecode
           in: path
           required: true
@@ -176,12 +166,6 @@ paths:
                 $ref: '#/components/schemas/PartnerUpdateLocationResponse'
         '400':
           description: Invalid payload (missing required fields, unknown enum codes, duplicate name within 500 m)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Missing or unknown partner identity
           content:
             application/json:
               schema:
@@ -561,15 +545,6 @@ components:
         enum: ["nl", "en", "de", "fr", "it"]
         default: "en"
         example: "en"
-    PartnerSecretHeader:
-      name: X-Partner-Secret
-      in: header
-      required: true
-      description: >
-        The calling supply partner's write secret, issued by Campercontact. Identity is resolved
-        from this credential — a request whose secret matches no configured partner is a 403.
-      schema:
-        type: string
   schemas:
     PartnerLocationRequest:
       type: object
