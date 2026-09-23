@@ -23,6 +23,51 @@ security:
 
 paths:
   /locations:
+    post:
+      summary: Create a partner-owned location (supply partners only)
+      description: >
+        Creates a location owned by the calling supply partner (PD-248). The location is accepted
+        and stored immediately; the Travelbase listing provisions asynchronously, so the location
+        starts non-bookable. Photos travel as partner-hosted URLs in `media` — send them from day
+        one so payloads never change, but they are not processed yet: photo ingest ships as a
+        follow-up. Requires the supply capability; the calling partner is identified by its
+        write secret in the X-Partner-Secret header. Rental units are not yet part of this
+        contract.
+      parameters:
+        - $ref: '#/components/parameters/PartnerSecretHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerCreateLocationRequest'
+      responses:
+        '201':
+          description: Location accepted and stored (not yet bookable)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerCreateLocationResponse'
+        '400':
+          description: Invalid payload (missing required fields, unknown enum codes, duplicate name within 500 m)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Missing or unknown partner identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The partner already has a location under this externalId — update it via PUT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     get:
       summary: Get basic location information
       description: Retrieve basic information about locations, optionally filtered by specific sitecodes
@@ -91,7 +136,64 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  # One path item for both operations: OpenAPI treats /locations/{externalId} and
+  # /locations/{sitecode} as the same templated path. The placeholder keeps the name the read
+  # clients were generated with; for PUT its value is the partner's externalId.
   /locations/{sitecode}:
+    put:
+      summary: Full-resource update of a partner-owned location (supply partners only)
+      description: >
+        Overwrites the payload-derived fields of the partner's location addressed by its own
+        externalId (the {sitecode} path parameter) — the partner is the source of truth for its
+        inventory, so moderator edits to the fields it sends do not stick. An absent address field
+        is cleared; an absent contact or limits field keeps its stored value. The media URL list is accepted
+        but not processed yet (photo ingest ships as a follow-up). Deactivation travels as
+        isActive=false; there is no DELETE. Another partner's externalId behaves as absent (404),
+        so existence cannot be probed.
+      parameters:
+        - $ref: '#/components/parameters/PartnerSecretHeader'
+        - name: sitecode
+          in: path
+          required: true
+          description: >
+            For this operation the value is the partner's own externalId for the location, not a
+            sitecode; the placeholder shares its name with the GET on the same path. The path carries
+            the identity on update; a body externalId is ignored.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerUpdateLocationRequest'
+      responses:
+        '200':
+          description: Location updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerUpdateLocationResponse'
+        '400':
+          description: Invalid payload (missing required fields, unknown enum codes, duplicate name within 500 m)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Missing or unknown partner identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The partner has no location under this externalId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     get:
       summary: Get basic location information
       description: Retrieve basic information about a specific location (sitecode and name only)
@@ -103,7 +205,7 @@ paths:
         - name: sitecode
           in: path
           required: true
-          description: The unique identifier of the location
+          description: The location sitecode
           schema:
             type: string
             example: "12345"
@@ -438,7 +540,15 @@ components:
       type: apiKey
       in: header
       name: x-api-key
-      description: API key for authentication. Contact Campercontact to obtain your API key.
+      description: API key for authentication at the API Gateway. Contact Campercontact to obtain your API key.
+    GatewaySecret:
+      type: apiKey
+      in: header
+      name: X-Partner-Api-Gateway-Secret
+      description: >
+        Injected by the Campercontact API Gateway on every forwarded request; the application rejects
+        requests without it. Partners authenticate with their x-api-key at the gateway and never send
+        this header themselves.
 
   parameters:
     AcceptLanguage:
@@ -451,8 +561,175 @@ components:
         enum: ["nl", "en", "de", "fr", "it"]
         default: "en"
         example: "en"
-
+    PartnerSecretHeader:
+      name: X-Partner-Secret
+      in: header
+      required: true
+      description: >
+        The calling supply partner's write secret, issued by Campercontact. Identity is resolved
+        from this credential — a request whose secret matches no configured partner is a 403.
+      schema:
+        type: string
   schemas:
+    PartnerLocationRequest:
+      type: object
+      description: The location payload shared by the create and update bodies.
+      required: [name, description, type, location, address, currency]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          description: One string; the backend auto-translates it into all supported languages.
+        type:
+          type: string
+          enum: [camperplace, camping, serviceplace, microcamping, parking]
+        location:
+          $ref: '#/components/schemas/PartnerGeoPointRequest'
+        address:
+          $ref: '#/components/schemas/PartnerAddressRequest'
+        contact:
+          allOf:
+            - $ref: '#/components/schemas/PartnerContactRequest'
+          nullable: true
+        currency:
+          type: string
+          description: ISO 4217 code
+        pricePeriods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerPricePeriodRequest'
+        amenities:
+          type: array
+          description: AmenityType codes, not free-form strings.
+          items:
+            $ref: '#/components/schemas/PartnerAmenityRequest'
+        surroundings:
+          type: array
+          items: { type: string }
+          description: SurroundingType codes.
+        terrains:
+          type: array
+          items: { type: string }
+          description: TerrainType codes.
+        limits:
+          allOf:
+            - $ref: '#/components/schemas/PartnerLimitsRequest'
+          nullable: true
+        discountCards:
+          type: array
+          items: { type: string }
+        media:
+          type: array
+          maxItems: 20
+          description: >
+            The location's photos as partner-hosted absolute https URLs (max 20). All images —
+            including per-rental-unit photos — belong in this one list. Accepted but not processed
+            yet: send it from day one so payloads never change; the ingest step (photos stored as
+            location images) ships as a follow-up.
+          items:
+            $ref: '#/components/schemas/PartnerMediaItemRequest'
+        isActive:
+          type: boolean
+          default: true
+          description: Deactivation travels on PUT — there is no DELETE for locations.
+    PartnerCreateLocationRequest:
+      allOf:
+        - $ref: '#/components/schemas/PartnerLocationRequest'
+        - type: object
+          required: [externalId]
+          properties:
+            externalId:
+              type: string
+              maxLength: 100
+              description: The partner's own permanent id for this location; the idempotency key of the create.
+    PartnerUpdateLocationRequest:
+      allOf:
+        - $ref: '#/components/schemas/PartnerLocationRequest'
+      description: The path carries the identity, so the body has no externalId.
+    PartnerGeoPointRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number }
+        longitude: { type: number }
+    PartnerAddressRequest:
+      type: object
+      description: >
+        Street and postal code are optional; a place name plus coordinates is enough. The displayed
+        city and country are reverse-geocoded from the coordinates; city and countryCode are stored
+        as the fallback for when geocoding returns nothing.
+      properties:
+        street: { type: string, nullable: true }
+        number: { type: string, nullable: true }
+        postalCode: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        countryCode: { type: string, nullable: true, description: ISO 3166-1 alpha-2 }
+    PartnerContactRequest:
+      type: object
+      properties:
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+    PartnerPricePeriodRequest:
+      type: object
+      required: [from, to, perNight]
+      properties:
+        from: { $ref: '#/components/schemas/DayOfYear' }
+        to: { $ref: '#/components/schemas/DayOfYear' }
+        perNight: { type: number, description: Rate per night in major units of the currency (38.50). }
+        touristTax: { type: number, default: 0, description: Per night, in the same unit as perNight. }
+    PartnerAmenityRequest:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string }
+        priceStatus: { type: string, nullable: true, enum: [unpaid, paid, unknown] }
+        ampere: { type: integer, nullable: true }
+    PartnerLimitsRequest:
+      type: object
+      properties:
+        maxCapacity: { type: integer, nullable: true }
+        maxStayHours: { type: string, nullable: true }
+        maxCamperLength: { type: string, nullable: true }
+    PartnerMediaItemRequest:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, maxLength: 2048 }
+        order:
+          type: integer
+          nullable: true
+          description: Gallery position (lower first, unordered items last).
+    DayOfYear:
+      type: object
+      required: [month, day]
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        day: { type: integer, minimum: 1, maximum: 31 }
+    PartnerCreateLocationResponse:
+      type: object
+      required: [sitecode, externalId, isBookable]
+      properties:
+        sitecode:
+          type: string
+          description: Server-generated; never client-supplied.
+        externalId:
+          type: string
+        isBookable:
+          type: boolean
+          description: Always false until Travelbase provisioning ships; poll the read endpoint.
+    PartnerUpdateLocationResponse:
+      type: object
+      required: [sitecode, externalId, isBookable]
+      properties:
+        sitecode:
+          type: string
+        externalId:
+          type: string
+        isBookable:
+          type: boolean
+          description: Always false until Travelbase provisioning ships; poll the read endpoint.
     PaginatedLocationsResponse:
       type: object
       required:
@@ -694,7 +971,7 @@ components:
         sourceType:
           type: string
           nullable: true
-          enum: ["qenner", "folder_import", "open_arial", "panoramax"]
+          enum: ["qenner", "folder_import", "open_arial", "panoramax", "campio"]
           description: >
             Optional partner source the image comes from. When provided it must be one of the known
             sources (case-insensitive) or the request is rejected. Stored as media provenance.
