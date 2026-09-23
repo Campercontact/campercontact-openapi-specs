@@ -968,6 +968,14 @@ components:
             photos at or after this position shift up by one. Defaults to 0 (inserted first) when omitted;
             a value beyond the end appends the photo last.
           example: 0
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Optional creation timestamp of the photo (ISO-8601). When supplied it is stored as the media's
+            creation date instead of the time of upload; when omitted or null the upload time is used.
+          example: "2024-05-01T10:00:00Z"
 
     MediaResponse:
       type: object
