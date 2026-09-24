@@ -27,8 +27,8 @@ paths:
       summary: Create a partner-owned location (supply partners only)
       description: >
         Creates a location owned by the calling supply partner (PD-248). The location is accepted
-        and stored immediately; the Travelbase listing provisions asynchronously, so the location
-        starts non-bookable. Photos travel as partner-hosted URLs in `media` — send them from day
+        and stored immediately as a Travelbase-bookable location, so prices are fetched from
+        Travelbase once its listing exists there. Photos travel as partner-hosted URLs in `media` — send them from day
         one so payloads never change, but they are not processed yet: photo ingest ships as a
         follow-up. Requires the supply capability. Rental units are not yet part of this
         contract.
@@ -40,7 +40,7 @@ paths:
               $ref: '#/components/schemas/PartnerCreateLocationRequest'
       responses:
         '201':
-          description: Location accepted and stored (not yet bookable)
+          description: Location accepted and stored
           content:
             application/json:
               schema:
@@ -685,7 +685,7 @@ components:
           type: string
         isBookable:
           type: boolean
-          description: Always false until Travelbase provisioning ships; poll the read endpoint.
+          description: True for supply-partner locations, which are priced through Travelbase.
     PartnerUpdateLocationResponse:
       type: object
       required: [sitecode, externalId, isBookable]
@@ -696,7 +696,7 @@ components:
           type: string
         isBookable:
           type: boolean
-          description: Always false until Travelbase provisioning ships; poll the read endpoint.
+          description: True for supply-partner locations, which are priced through Travelbase.
     PaginatedLocationsResponse:
       type: object
       required:
