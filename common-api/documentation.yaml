@@ -14398,7 +14398,6 @@ components:
         - "ccc"
         - "cke"
         - "svr"
-        - "nkc"
         - "camping_cheque"
         - "best_deal"
     ModifyFavoriteLocationsRequest:
