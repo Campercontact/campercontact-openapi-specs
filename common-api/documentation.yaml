@@ -217,6 +217,11 @@ paths:
                   type: boolean
                   default: false
                   description: "When true, only return locations that have 1 or more reviews"
+                hasPhotos:
+                  type: boolean
+                  nullable: true
+                  default: null
+                  description: "When true, only return locations with at least one photo (uploaded or imported). When false, only return locations without any photo. Omit or null to not filter on photos."
       responses:
         "200":
           description: "OK - Returns locations matching any of the provided states"
