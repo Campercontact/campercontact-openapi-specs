@@ -1445,6 +1445,37 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/CreateCheckoutSessionResponse"
+  /v1/email/validate:
+    post:
+      description: "Validates an email address during account creation and optionally\
+        \ returns a suggested correction. Callable before authentication. When the\
+        \ check cannot be completed the endpoint answers with the UNKNOWN verdict\
+        \ instead of an error, so the signup flow is never blocked."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateEmailAddressRequest"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateEmailAddressResponse"
+        "400":
+          description: "Bad Request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: "Internal Server Error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/create-custom-token:
     post:
       description: "Creates a custom token and adds out native userId as claim to\
@@ -11230,6 +11261,34 @@ components:
       required:
         - "message"
         - "code"
+    ValidateEmailAddressRequest:
+      type: "object"
+      properties:
+        emailAddress:
+          type: "string"
+          minLength: 1
+          maxLength: 254
+          description: "The email address to validate."
+      required:
+        - "emailAddress"
+    ValidateEmailAddressResponse:
+      type: "object"
+      properties:
+        verdict:
+          type: "string"
+          enum:
+            - "VALID"
+            - "INVALID"
+            - "UNKNOWN"
+          description: "Our judgement about the address. UNKNOWN means we have no opinion\
+            \ (upstream unavailable, slow, or out of quota) and clients must let the\
+            \ user continue as if no check had run."
+        suggestion:
+          type: "string"
+          nullable: true
+          description: "A corrected address to offer the user, or null when we have none."
+      required:
+        - "verdict"
     ErrorResponse:
       type: "object"
       properties:
