@@ -525,14 +525,6 @@ components:
       in: header
       name: x-api-key
       description: API key for authentication at the API Gateway. Contact Campercontact to obtain your API key.
-    GatewaySecret:
-      type: apiKey
-      in: header
-      name: X-Partner-Api-Gateway-Secret
-      description: >
-        Injected by the Campercontact API Gateway on every forwarded request; the application rejects
-        requests without it. Partners authenticate with their x-api-key at the gateway and never send
-        this header themselves.
 
   parameters:
     AcceptLanguage:
