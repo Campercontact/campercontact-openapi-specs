@@ -18,6 +18,12 @@ info:
     name: Campercontact API Support
     email: developer@campercontact.com
 
+servers:
+  - url: https://partners.campercontact.com/v1/partner
+    description: Production
+  - url: https://partners.acc.campercontact.com/v1/partner
+    description: Acceptance
+
 security:
   - ApiKeyAuth: []
 
@@ -26,12 +32,10 @@ paths:
     post:
       summary: Create a partner-owned location (supply partners only)
       description: >
-        Creates a location owned by the calling supply partner (PD-248). The location is accepted
-        and stored immediately as a Travelbase-bookable location, so prices are fetched from
-        Travelbase once its listing exists there. Photos travel as partner-hosted URLs in `media` — send them from day
-        one so payloads never change, but they are not processed yet: photo ingest ships as a
-        follow-up. Requires the supply capability. Rental units are not yet part of this
-        contract.
+        Creates a location owned by the calling supply partner. The location is accepted
+        and stored immediately as a bookable location, so prices are fetched from
+        Campercontact PMS once its listing exists there. Photos travel as partner-hosted URLs
+        in `media`. Requires the supply capability.
       requestBody:
         required: true
         content:
@@ -137,8 +141,7 @@ paths:
         Overwrites the payload-derived fields of the partner's location addressed by its own
         externalId (the {sitecode} path parameter) — the partner is the source of truth for its
         inventory, so moderator edits to the fields it sends do not stick. An absent address field
-        is cleared; an absent contact or limits field keeps its stored value. The media URL list is accepted
-        but not processed yet (photo ingest ships as a follow-up). Deactivation travels as
+        is cleared; an absent contact or limits field keeps its stored value. Deactivation travels as
         isActive=false; there is no DELETE. Another partner's externalId behaves as absent (404),
         so existence cannot be probed.
       parameters:
@@ -591,9 +594,7 @@ components:
           maxItems: 20
           description: >
             The location's photos as partner-hosted absolute https URLs (max 20). All images —
-            including per-rental-unit photos — belong in this one list. Accepted but not processed
-            yet: send it from day one so payloads never change; the ingest step (photos stored as
-            location images) ships as a follow-up.
+            including per-rental-unit photos — belong in this one list.
           items:
             $ref: '#/components/schemas/PartnerMediaItemRequest'
         isActive:
@@ -645,7 +646,7 @@ components:
         from: { $ref: '#/components/schemas/DayOfYear' }
         to: { $ref: '#/components/schemas/DayOfYear' }
         perNight: { type: number, description: Rate per night in major units of the currency (38.50). }
-        touristTax: { type: number, default: 0, description: Per night, in the same unit as perNight. }
+        touristTax: { type: number, default: 0, description: "Per night, in the same unit as perNight." }
     PartnerAmenityRequest:
       type: object
       required: [type]
@@ -685,7 +686,7 @@ components:
           type: string
         isBookable:
           type: boolean
-          description: True for supply-partner locations, which are priced through Travelbase.
+          description: True for supply-partner locations, which are priced through Campercontact PMS.
     PartnerUpdateLocationResponse:
       type: object
       required: [sitecode, externalId, isBookable]
@@ -696,7 +697,7 @@ components:
           type: string
         isBookable:
           type: boolean
-          description: True for supply-partner locations, which are priced through Travelbase.
+          description: True for supply-partner locations, which are priced through Campercontact PMS.
     PaginatedLocationsResponse:
       type: object
       required:
@@ -896,7 +897,7 @@ components:
           example: "12345"
         isBookable:
           type: boolean
-          description: Whether the location supports real-time booking via TravelBase
+          description: Whether the location supports real-time booking via Campercontact
           example: true
         isOpen:
           type: boolean
@@ -934,22 +935,21 @@ components:
           type: string
           format: uri
           description: Public https url of the image to fetch and append
-          example: "https://panoramax.example.org/photo/abc.jpg"
+          example: "https://images.example.com/photo/abc.jpg"
         sourceType:
           type: string
           nullable: true
-          enum: ["qenner", "folder_import", "open_arial", "panoramax", "campio"]
           description: >
-            Optional partner source the image comes from. When provided it must be one of the known
-            sources (case-insensitive) or the request is rejected. Stored as media provenance.
-          example: "panoramax"
+            Optional source the image comes from. Use your partner name (case-insensitive); an
+            unknown source is rejected. Stored as media provenance.
+          example: "yourpartnername"
         attribution:
           type: string
           nullable: true
           description: >
             Optional, free-form credit text for the photo (e.g. photographer or source line). Not
             validated. Stored alongside the source in the media metadata.
-          example: "© Jane Doe / Panoramax"
+          example: "© Jane Doe"
         order:
           type: integer
           format: int32
