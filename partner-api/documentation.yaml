@@ -32,7 +32,7 @@ paths:
     post:
       summary: Create a partner-owned location (supply partners only)
       description: >
-        Creates a location owned by the calling supply partner (PD-248). The location is accepted
+        Creates a location owned by the calling supply partner. The location is accepted
         and stored immediately as a Travelbase-bookable location, so prices are fetched from
         Travelbase once its listing exists there. Photos travel as partner-hosted URLs in `media` — send them from day
         one so payloads never change, but they are not processed yet: photo ingest ships as a
