@@ -35,7 +35,7 @@ paths:
         Creates a location owned by the calling supply partner. The location is accepted
         and stored immediately as a bookable location, so prices are fetched from
         Campercontact PMS once its listing exists there. Photos travel as partner-hosted URLs
-        in `media`. Requires the supply capability.
+        in `media`; they are accepted but not processed yet. Requires the supply capability.
       requestBody:
         required: true
         content:
@@ -141,7 +141,8 @@ paths:
         Overwrites the payload-derived fields of the partner's location addressed by its own
         externalId (the {sitecode} path parameter) — the partner is the source of truth for its
         inventory, so moderator edits to the fields it sends do not stick. An absent address field
-        is cleared; an absent contact or limits field keeps its stored value. Deactivation travels as
+        is cleared; an absent contact or limits field keeps its stored value. The media URL list is
+        accepted but not processed yet. Deactivation travels as
         isActive=false; there is no DELETE. Another partner's externalId behaves as absent (404),
         so existence cannot be probed.
       parameters:
@@ -594,7 +595,8 @@ components:
           maxItems: 20
           description: >
             The location's photos as partner-hosted absolute https URLs (max 20). All images —
-            including per-rental-unit photos — belong in this one list.
+            including per-rental-unit photos — belong in this one list. Accepted but not
+            processed yet.
           items:
             $ref: '#/components/schemas/PartnerMediaItemRequest'
         isActive:
@@ -940,9 +942,9 @@ components:
           type: string
           nullable: true
           description: >
-            Optional source the image comes from. Use your partner name (case-insensitive); an
-            unknown source is rejected. Stored as media provenance.
-          example: "yourpartnername"
+            Optional source the image comes from. Use the source name agreed with Campercontact
+            (case-insensitive); any other value is rejected. Stored as media provenance.
+          example: "your-source-name"
         attribution:
           type: string
           nullable: true
