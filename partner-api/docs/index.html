@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Partner API - Campercontact</title>
     <meta name="description" content="API reference for the Campercontact Partners API" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Radio+Canada+Big:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app"></div>
@@ -21,6 +27,38 @@
         agent: { disabled: true },
         mcp: { disabled: true },
         telemetry: false,
+        favicon: './favicon.svg',
+        // The logo only exists in green, so the docs stay in light mode
+        forceDarkModeState: 'light',
+        hideDarkModeToggle: true,
+        withDefaultFonts: false,
+        theme: 'none',
+        // Full green fails text contrast (3.6:1), so links and highlights use dark green
+        customCss: `
+          .light-mode {
+            --scalar-font: 'Radio Canada Big', sans-serif;
+            --scalar-color-1: #1a4948;
+            --scalar-color-2: #3c5f5e;
+            --scalar-color-3: #5f7b7a;
+            --scalar-color-accent: #1a4948;
+            --scalar-background-1: #ffffff;
+            --scalar-background-2: #f1f8f2;
+            --scalar-background-3: #e4f0e6;
+            --scalar-background-accent: #f1f8f2;
+            --scalar-border-color: #dde9df;
+            --scalar-sidebar-background-1: #f1f8f2;
+            --scalar-sidebar-item-active-background: #e4f0e6;
+            --scalar-sidebar-color-active: #1a4948;
+            --scalar-sidebar-search-background: #ffffff;
+          }
+          .t-doc__sidebar::before {
+            content: '';
+            display: block;
+            height: 32px;
+            margin: 20px 12px 8px;
+            background: url('./logo.svg') left center / contain no-repeat;
+          }
+        `,
       })
     </script>
   </body>
