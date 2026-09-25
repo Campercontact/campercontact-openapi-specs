@@ -28,10 +28,8 @@
         mcp: { disabled: true },
         telemetry: false,
         favicon: './favicon.svg',
-        withDefaultFonts: false,
-        theme: 'none',
-        // Full green fails text contrast on both backgrounds, so links and highlights
-        // use dark green in light mode and the lighter brand green in dark mode
+        // Light mode gets the brand colours; full green fails text contrast (3.6:1), so
+        // links and highlights use dark green. Dark mode is Scalar's default theme.
         customCss: `
           .light-mode {
             --scalar-font: 'Radio Canada Big', sans-serif;
@@ -48,22 +46,6 @@
             --scalar-sidebar-item-active-background: #e4f0e6;
             --scalar-sidebar-color-active: #1a4948;
             --scalar-sidebar-search-background: #ffffff;
-          }
-          .dark-mode {
-            --scalar-font: 'Radio Canada Big', sans-serif;
-            --scalar-color-1: #f1f8f2;
-            --scalar-color-2: #c3d6cf;
-            --scalar-color-3: #93aea6;
-            --scalar-color-accent: #1fb25e;
-            --scalar-background-1: #0f2a29;
-            --scalar-background-2: #153938;
-            --scalar-background-3: #1a4948;
-            --scalar-background-accent: #153938;
-            --scalar-border-color: #245856;
-            --scalar-sidebar-background-1: #153938;
-            --scalar-sidebar-item-active-background: #1a4948;
-            --scalar-sidebar-color-active: #f1f8f2;
-            --scalar-sidebar-search-background: #0f2a29;
           }
           .t-doc__sidebar::before {
             content: '';
