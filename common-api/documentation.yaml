@@ -13081,6 +13081,10 @@ components:
             $ref: "#/components/schemas/HighlightedFacilityResponse"
         location:
           $ref: "#/components/schemas/GeoLocationResponse"
+        mapPhotoUrl:
+          type: "string"
+          nullable: true
+          description: "URL of a static hybrid (satellite with labels) map image centred on the location, with a marker on it. Null when the location has no coordinates."
         discounts:
           type: "array"
           items:
