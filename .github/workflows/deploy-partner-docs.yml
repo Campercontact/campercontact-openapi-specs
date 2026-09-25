@@ -68,13 +68,18 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": ":book: Partner API docs deploy ${{ needs.deploy.result }}",
+              "text": "Partner API docs | ${{ needs.deploy.result == 'success' && 'Succeeded' || needs.deploy.result == 'cancelled' && 'Cancelled' || 'Failed' }}",
               "blocks": [
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ needs.deploy.result == 'success' && ':white_check_mark:' || ':x:' }} *Partner API docs* | :rocket: *Production*"
+                    "text": ":book: *Partner API docs*"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": { "type": "plain_text", "text": "View run" },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
                 },
                 {
@@ -82,7 +87,7 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run> · ${{ github.ref_name }}"
+                      "text": "${{ needs.deploy.result == 'success' && ':white_check_mark: Succeeded' || needs.deploy.result == 'cancelled' && ':white_circle: Cancelled' || ':x: Failed' }} · ${{ github.ref_name }}"
                     }
                   ]
                 }
