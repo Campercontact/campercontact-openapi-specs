@@ -12835,6 +12835,22 @@ components:
         - "rel"
         - "href"
         - "method"
+    HighlightedFacilityResponse:
+      type: "object"
+      properties:
+        group:
+          type: "string"
+          description: "The LocationResponse list that holds the facility."
+          enum:
+            - "amenities"
+            - "surroundings"
+            - "terrain"
+        code:
+          type: "string"
+          description: "The facility code within that list."
+      required:
+        - "group"
+        - "code"
     GeoLocationResponse:
       type: "object"
       properties:
@@ -13058,6 +13074,11 @@ components:
           type: "array"
           items:
             type: "string"
+        highlightedFacilities:
+          description: "Up to 10 of the location's facilities, ranked for the location type. Each item points to an entry in amenities, surroundings or terrain, so price status and ampere are read from there."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/HighlightedFacilityResponse"
         location:
           $ref: "#/components/schemas/GeoLocationResponse"
         discounts:
@@ -13091,6 +13112,7 @@ components:
         - "amenities"
         - "terrain"
         - "surroundings"
+        - "highlightedFacilities"
         - "discounts"
     NewEmbeddedMediaRequest:
       type: "object"
