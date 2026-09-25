@@ -1,0 +1,90 @@
+###
+## Publishes the public Partner API docs (Scalar) to Heroku.
+## Runs when the partner spec changes; the spec itself is pushed to this repo by
+## campercontact-aws-common-api's deploy-partner-ecs workflow.
+name: Deploy Partner API docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'partner-api/**'
+      - '.github/workflows/deploy-partner-docs.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-partner-docs
+  cancel-in-progress: true
+
+env:
+  HEROKU_APP: campercontact-partner-docs
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Lint spec
+        run: npx --yes @redocly/cli@2 lint partner-api/documentation.yaml --config partner-api/redocly.yaml --format github-actions
+
+      - name: Log in to Heroku Container Registry
+        run: echo $HEROKU_API_KEY | docker login --username=_ --password-stdin registry.heroku.com
+
+      - name: Build Docker image
+        run: |
+          docker build -f partner-api/docs/Dockerfile \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            -t registry.heroku.com/${HEROKU_APP}/web partner-api
+
+      - name: Push Docker image
+        run: docker push registry.heroku.com/${HEROKU_APP}/web
+
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install.sh | sh
+
+      - name: Release app on Heroku
+        run: heroku container:release web --app $HEROKU_APP
+
+
+  notify:
+    needs: [deploy]
+    if: always() && needs.deploy.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v4
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": ":book: Partner API docs deploy ${{ needs.deploy.result }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ needs.deploy.result == 'success' && ':white_check_mark:' || ':x:' }} *Partner API docs* | :rocket: *Production*"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run> · ${{ github.ref_name }}"
+                    }
+                  ]
+                }
+              ]
+            }

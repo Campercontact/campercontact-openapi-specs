@@ -1,0 +1,5 @@
+extends:
+  - recommended
+rules:
+  # `nullable` next to `allOf` is how the spec marks optional nested objects
+  nullable-type-sibling: warn

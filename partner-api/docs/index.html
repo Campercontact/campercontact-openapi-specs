@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Campercontact Partners API</title>
+    <meta name="description" content="API reference for the Campercontact Partners API" />
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Pinned so a Scalar release can never change the docs without a commit -->
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.72.1"></script>
+    <script>
+      Scalar.createApiReference('#app', {
+        url: './documentation.yaml',
+        // Read-only for now: the partner API does not allow CORS from the docs domain yet
+        hideTestRequestButton: true,
+        hideClientButton: true,
+        showDeveloperTools: 'never',
+        agent: { disabled: true },
+        mcp: { disabled: true },
+        telemetry: false,
+      })
+    </script>
+  </body>
+</html>

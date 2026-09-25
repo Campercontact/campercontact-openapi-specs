@@ -18,6 +18,12 @@ info:
     name: Campercontact API Support
     email: developer@campercontact.com
 
+servers:
+  - url: https://partners.campercontact.com/v1/partner
+    description: Production
+  - url: https://partners.acc.campercontact.com/v1/partner
+    description: Acceptance
+
 security:
   - ApiKeyAuth: []
 
@@ -645,7 +651,7 @@ components:
         from: { $ref: '#/components/schemas/DayOfYear' }
         to: { $ref: '#/components/schemas/DayOfYear' }
         perNight: { type: number, description: Rate per night in major units of the currency (38.50). }
-        touristTax: { type: number, default: 0, description: Per night, in the same unit as perNight. }
+        touristTax: { type: number, default: 0, description: "Per night, in the same unit as perNight." }
     PartnerAmenityRequest:
       type: object
       required: [type]
