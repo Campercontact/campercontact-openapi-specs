@@ -2380,8 +2380,11 @@ paths:
             type: "string"
       responses:
         "400":
-          description: "Bad Request"
+          description: "The uploaded object is missing, or its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif); the media is removed"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -2540,8 +2543,11 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request; a content type outside the accepted set is rejected with a typed error"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -2589,8 +2595,11 @@ paths:
             type: "string"
       responses:
         "400":
-          description: "Bad Request"
+          description: "The uploaded object is missing, or its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif); the media is removed"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -2756,8 +2765,11 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request; a content type outside the accepted set is rejected with a typed error"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -5762,8 +5774,11 @@ paths:
             type: "string"
       responses:
         "400":
-          description: "Bad Request"
+          description: "The uploaded object is missing, or its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif); the media is removed"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -5834,8 +5849,11 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request; a content type outside the accepted set is rejected with a typed error"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -7168,8 +7186,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/NewUploadReponse"
         "400":
-          description: "Bad Request"
+          description: "Bad Request; a content type outside the accepted set is rejected with a typed error"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -7206,8 +7227,11 @@ paths:
         "200":
           description: "OK"
         "400":
-          description: "Bad Request"
+          description: "The uploaded object is missing, or its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif); the media is removed"
           content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
             text/plain:
               schema:
                 type: "string"
@@ -9673,7 +9697,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/JourneyUploadResponse"
         "400":
-          description: "Invalid request or max photos exceeded"
+          description: "Invalid request or max photos exceeded; a content type outside the accepted set is rejected with a typed error"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: "Unauthorized"
         "404":
@@ -9705,7 +9733,11 @@ paths:
         "200":
           description: "Upload confirmed"
         "400":
-          description: "Media does not belong to journey or max photos exceeded"
+          description: "Media does not belong to journey or max photos exceeded; or the uploaded object is missing, or its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif); the media is removed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: "Unauthorized"
   /v1/journeys/{id}/media/{mediaId}/upload-failed:
@@ -11016,7 +11048,7 @@ components:
           description: "Type of entity: 'journey' for cover photo, 'destination' for destination photo, 'activity' for activity photo"
         contentType:
           type: string
-          description: "MIME type of the image (must start with 'image/')"
+          description: "MIME type of the image. Accepted: image/jpeg, image/jpg, image/png, image/webp, image/heic, image/heif. Anything else is rejected with 400."
           example: "image/jpeg"
         contentLength:
           type: integer
@@ -13143,6 +13175,8 @@ components:
       properties:
         contentType:
           type: "string"
+          description: "MIME type of the file. Accepted photo types: image/jpeg, image/jpg, image/png, image/webp, image/heic, image/heif. Accepted video types: video/mp4, video/ogg, video/webm. Anything else is rejected with 400."
+          example: "image/jpeg"
         contentLength:
           type: "integer"
           format: "int64"
@@ -15113,6 +15147,8 @@ components:
       properties:
         contentType:
           type: "string"
+          description: "MIME type of the file. Accepted photo types: image/jpeg, image/jpg, image/png, image/webp, image/heic, image/heif. Accepted video types: video/mp4, video/ogg, video/webm. Anything else is rejected with 400."
+          example: "image/jpeg"
         contentLength:
           type: "integer"
           format: "int64"
