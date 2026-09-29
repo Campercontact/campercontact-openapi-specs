@@ -69,6 +69,52 @@ paths:
           description: Invalid input
         '500':
           description: Server error
+  /search/moderation/nearby:
+    get:
+      summary: Locations of every status near the given lat/lon, for moderators
+      description: >
+        Returns POIs within `radius` metres of the given point, nearest first, capped at 100 results.
+        Unlike the public geo routes this includes every status (closed, denied, pending, ...), so the
+        moderation portal can spot duplicate submissions.
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - name: lat
+          in: query
+          required: true
+          description: Latitude of the location being moderated
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          description: Longitude of the location being moderated
+          schema:
+            type: number
+        - name: radius
+          in: query
+          description: Search radius in metres. Must be greater than 0 and at most 5000.
+          schema:
+            type: number
+            minimum: 0
+            exclusiveMinimum: true
+            maximum: 5000
+            default: 500
+        - in: query
+          name: excludedSitecode
+          schema:
+            type: integer
+          description: Sitecode to exclude from the response, typically the location being moderated
+      responses:
+        '200':
+          description: Matching locations returned successfully, nearest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationNearbyResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
   /search/popular:
     get:
       summary: Search for the most popular locations
@@ -1069,6 +1115,53 @@ components:
           $ref: '#/components/schemas/LatLng'
         permalink:
           type: string
+        metaData:
+          type: object
+          required:
+            - distance
+          properties:
+            distance:
+              type: number
+              description: Distance in metres from the requested lat/lon, rounded.
+              example: 42
+
+    ModerationNearbyResponse:
+      type: array
+      description: Locations of every status, sorted by ascending distance from the given point. At most 100 items.
+      items:
+        $ref: '#/components/schemas/ModerationNearbyLocation'
+
+    ModerationNearbyLocation:
+      type: object
+      required:
+        - id
+        - sitecode
+        - status
+        - title
+        - location
+        - metaData
+      properties:
+        id:
+          type: string
+        sitecode:
+          type: integer
+        type:
+          type: string
+          enum: [camping, camperplace, serviceplace, microcamping, parking]
+        status:
+          type: string
+          description: Location status as indexed. IN_PROGRESS is indexed as NEW and REVIEWING as ACTIVE.
+          enum: [ACTIVE, INACTIVE, CONCEPT, EXPIRED, DENIED, NEW, IMPORTED, UNKNOWN]
+        title:
+          type: string
+        subtitle:
+          type: string
+          description: City and country
+        thumbnail:
+          type: string
+          description: URL to the thumbnail image
+        location:
+          $ref: '#/components/schemas/LatLng'
         metaData:
           type: object
           required:
