@@ -1136,7 +1136,6 @@ components:
       required:
         - id
         - sitecode
-        - status
         - title
         - location
         - metaData
@@ -1150,7 +1149,7 @@ components:
           enum: [camping, camperplace, serviceplace, microcamping, parking]
         status:
           type: string
-          description: Location status as indexed. IN_PROGRESS is indexed as NEW and REVIEWING as ACTIVE.
+          description: Location status as indexed. IN_PROGRESS is indexed as NEW and REVIEWING as ACTIVE. Missing for documents indexed without a status.
           enum: [ACTIVE, INACTIVE, CONCEPT, EXPIRED, DENIED, NEW, IMPORTED, UNKNOWN]
         title:
           type: string
