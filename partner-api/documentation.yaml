@@ -55,6 +55,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '409':
           description: The partner already has a location under this externalId — update it via PUT
           content:
@@ -128,6 +132,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -174,6 +180,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '404':
           description: The partner has no location under this externalId
           content:
@@ -223,6 +233,8 @@ paths:
                 error: "Missing location sitecode"
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '404':
           description: Location not found
           content:
@@ -337,6 +349,8 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '429':
           description: Too Many Requests - Rate limit exceeded
           content:
@@ -433,6 +447,8 @@ paths:
                 $ref: '#/components/schemas/ValidationError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '404':
           description: Location not found
           content:
@@ -497,11 +513,7 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Forbidden - request did not come through the Partner API Gateway
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/ForbiddenError'
         '404':
           description: Location not found
           content:
@@ -748,6 +760,17 @@ components:
           type: string
           description: Name of the location
           example: "Camperpark De Zandstuve"
+
+    GatewayError:
+      type: object
+      description: >-
+        Default API Gateway error body. The property name is `message` for key validation failures and `Message`
+        for authorizer denies; treat the key as case-insensitive.
+      properties:
+        message:
+          type: string
+        Message:
+          type: string
 
     Error:
       type: object
@@ -1055,13 +1078,31 @@ components:
 
   responses:
     UnauthorizedError:
-      description: Unauthorized - Invalid or missing API key
+      description: >-
+        Returned by API Gateway when the `x-api-key` header is missing, when no enabled key matches its value, or
+        when the matched key belongs to a partner without a configured policy. Not the `Error` schema: the gateway
+        answers before the request reaches the application.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/GatewayError'
           example:
-            error: "Unauthorized - Invalid or missing API key"
+            message: "Unauthorized"
+
+    ForbiddenError:
+      description: >-
+        Returned by API Gateway when the API key is valid but its partner is not allowed to call this method
+        (`{"Message": "User is not authorized to access this resource with an explicit deny"}`). Not the `Error`
+        schema: the gateway answers before the request reaches the application.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GatewayError'
+          examples:
+            methodNotAllowed:
+              summary: Partner not allowed to call this method
+              value:
+                Message: "User is not authorized to access this resource with an explicit deny"
 
     InternalServerError:
       description: Internal server error
