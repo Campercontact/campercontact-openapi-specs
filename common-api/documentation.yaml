@@ -2380,7 +2380,7 @@ paths:
             type: "string"
       responses:
         "400":
-          description: "The uploaded object is missing, its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif), or it is larger than 25 MB; the media is removed"
+          description: "The uploaded object is missing, is not an accepted image (jpeg, jpg, png, webp, heic, heif) or is larger than 25 MB, in which case the media is removed; or there is no pending upload behind the media id"
           content:
             application/json:
               schema:
@@ -2595,7 +2595,7 @@ paths:
             type: "string"
       responses:
         "400":
-          description: "The uploaded object is missing, its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif), or it is larger than 25 MB; the media is removed"
+          description: "The uploaded object is missing, is not an accepted image (jpeg, jpg, png, webp, heic, heif) or is larger than 25 MB, in which case the media is removed; or there is no pending upload behind the media id"
           content:
             application/json:
               schema:
@@ -5774,7 +5774,7 @@ paths:
             type: "string"
       responses:
         "400":
-          description: "The uploaded object is missing, its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif), or it is larger than 25 MB; the media is removed"
+          description: "The uploaded object is missing, is not an accepted image (jpeg, jpg, png, webp, heic, heif) or is larger than 25 MB, in which case the media is removed; or there is no pending upload behind the media id"
           content:
             application/json:
               schema:
@@ -7227,7 +7227,7 @@ paths:
         "200":
           description: "OK"
         "400":
-          description: "The uploaded object is missing, its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif), or it is larger than 25 MB; the media is removed"
+          description: "The uploaded object is missing, is not an accepted image (jpeg, jpg, png, webp, heic, heif) or is larger than 25 MB, in which case the media is removed; or there is no pending upload behind the media id"
           content:
             application/json:
               schema:
@@ -9733,7 +9733,7 @@ paths:
         "200":
           description: "Upload confirmed"
         "400":
-          description: "Media does not belong to journey or max photos exceeded; or the uploaded object is missing, its bytes are not an accepted image (jpeg, jpg, png, webp, heic, heif), or it is larger than 25 MB; the media is removed"
+          description: "Media does not belong to journey or max photos exceeded; or the uploaded object is missing, is not an accepted image (jpeg, jpg, png, webp, heic, heif) or is larger than 25 MB, in which case the media is removed; or there is no pending upload behind the media id"
           content:
             application/json:
               schema:
