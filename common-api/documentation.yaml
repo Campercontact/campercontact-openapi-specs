@@ -13448,6 +13448,7 @@ components:
           enum:
             - "UNKNOWN"
             - "UNLIMITED"
+            - "METER_5"
             - "METER_6"
             - "METER_7"
             - "METER_8"
