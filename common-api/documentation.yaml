@@ -12084,6 +12084,17 @@ components:
               nullable: true
           required:
             - "displayName"
+        attribution:
+          type: string
+          nullable: true
+          description: Free-form credit line for media that did not come from a user, e.g. a photographer or
+            source. Null when none was given.
+        source:
+          type: string
+          nullable: true
+          enum: [ user, qenner, folder_import, open_arial, panoramax, campio ]
+          description: Where the media came from. `user` for uploads by a Campercontact user, otherwise the
+            external system it was imported from. Null for legacy items with neither.
         createdAt:
           type: "string"
           nullable: true
