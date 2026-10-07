@@ -10575,6 +10575,10 @@ components:
       type: object
       description: "Details of the CamperContact location linked to this destination"
       properties:
+        status:
+          $ref: "#/components/schemas/LocationStatus"
+          nullable: true
+          description: "Current status of the location, so clients can label closed stops"
         isClaimed:
           type: boolean
           description: "Whether the location is claimed by its owner (has a paid subscription)"
@@ -13050,6 +13054,11 @@ components:
         status:
           $ref: "#/components/schemas/LocationStatus"
           nullable: true
+        removalReason:
+          allOf:
+            - $ref: "#/components/schemas/RemovalReason"
+          nullable: true
+          description: "Reason a moderator gave when removing this location, stored on the location itself. Only set when status is 'expired', and null when it was removed without a recorded reason, which includes everything closed before the reason was captured. The matching internal note is written separately and does not affect this value."
         media:
           type: "array"
           items:
@@ -14353,10 +14362,11 @@ components:
         - "parking"
     LocationStatus:
       type: "string"
-      description: "Possible location statuses."
+      description: "Possible location statuses. 'concept' is stored by the Mendix import."
       enum:
         - "active"
         - "inactive"
+        - "concept"
         - "expired"
         - "denied"
         - "new"
