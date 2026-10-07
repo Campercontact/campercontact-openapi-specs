@@ -1036,6 +1036,17 @@ components:
           nullable: true
           description: When the media was created
           example: "2026-09-15T10:30:00Z"
+        attribution:
+          type: string
+          nullable: true
+          description: The credit text that was supplied in `InsertLocationPhotoRequest.attribution`, or null when none was given.
+          example: "© Jane Doe"
+        source:
+          type: string
+          nullable: true
+          description: >
+            The source name supplied in `InsertLocationPhotoRequest.sourceType`, normalized to lowercase.
+            Null when it was omitted.
 
     PitchPrice:
       type: object
