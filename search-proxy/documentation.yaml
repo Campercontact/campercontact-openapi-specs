@@ -196,6 +196,16 @@ paths:
           description: >
             When true, geo results from Photon include all OSM key types (e.g. tourism, leisure, amenity) in addition to cities, countries and regions.
             When false (default), only cities, countries and regions are returned.
+        - in: query
+          name: includeClosed
+          schema:
+            type: boolean
+            default: false
+          description: >
+            When true, closed (INACTIVE and EXPIRED) locations are also returned, but only for an exact name
+            (case-insensitive) or sitecode match. When more locations have exactly the same name, closed
+            locations found by that name are left out and only the open ones are returned. DENIED locations
+            are never returned. When false (default), only open locations are returned.
       responses:
         '200':
           description: Suggestions returned successfully
@@ -1273,6 +1283,10 @@ components:
           type: string
         sitecode:
           type: integer
+        status:
+          type: string
+          enum: [ACTIVE, NEW, IMPORTED, INACTIVE, EXPIRED]
+          description: Location status. INACTIVE and EXPIRED are only returned with includeClosed=true.
         type:
           type: string
           enum: [camping, camperplace, serviceplace, parking]
