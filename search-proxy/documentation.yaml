@@ -322,6 +322,15 @@ paths:
         - $ref: '#/components/parameters/sort.sortLocationLat'
         - $ref: '#/components/parameters/sort.sortLocationLon'
         - $ref: '#/components/parameters/distance'
+        - in: query
+          name: includeClosed
+          schema:
+            type: boolean
+            default: false
+          description: >
+            When true and `sitecodes` is set, closed (INACTIVE and EXPIRED) locations from that list
+            are returned too. Without `sitecodes` this flag has no effect, so a search by area never
+            returns closed locations. DENIED locations are never returned.
       responses:
         '200':
           description: Map search results returned successfully
@@ -989,6 +998,13 @@ components:
               type: integer
             poiType:
               type: string
+            status:
+              type: string
+              enum: [ACTIVE, INACTIVE, CONCEPT, EXPIRED, DENIED, NEW, IMPORTED, UNKNOWN]
+              description: >
+                Location status. Endpoints return only ACTIVE, NEW and IMPORTED locations, except
+                /results/list with includeClosed (see that parameter) and /results/preview, which
+                returns the location whatever its status.
             price:
               type: number
               description: Current active price in EUR (coming from Travelbase)
