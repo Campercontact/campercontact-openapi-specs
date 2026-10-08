@@ -204,8 +204,9 @@ paths:
           description: >
             When true, closed (INACTIVE and EXPIRED) locations are also returned, but only for an exact name
             (case-insensitive) or sitecode match. When more locations have exactly the same name, closed
-            locations found by that name are left out and only the open ones are returned. DENIED locations
-            are never returned. When false (default), only open locations are returned.
+            locations found by that name are left out and only the open ones are returned. DENIED locations,
+            and EXPIRED locations removed for a reason that hides them, are never returned. When false
+            (default), only open locations are returned.
       responses:
         '200':
           description: Suggestions returned successfully
@@ -842,7 +843,8 @@ components:
       description: >
         When true and `sitecodes` is set, closed (INACTIVE and EXPIRED) locations from that list
         are returned too. Without `sitecodes` this flag has no effect, so a search by area never
-        returns closed locations. DENIED locations are never returned.
+        returns closed locations. DENIED locations, and EXPIRED locations removed for a reason
+        that hides them, are never returned.
     radiusMetersParam:
       name: radius
       in: query
