@@ -13207,6 +13207,9 @@ components:
             - $ref: "#/components/schemas/RemovalReason"
           nullable: true
           description: "Reason a moderator gave when removing this location, stored on the location itself. Only set when status is 'expired', and null when it was removed without a recorded reason, which includes everything closed before the reason was captured. The matching internal note is written separately and does not affect this value."
+        isHiddenByRemovalReason:
+          type: "boolean"
+          description: "True when this location was removed for a reason that is not a real closure (owner request, duplicate, merged, does not exist, does not meet criteria). Clients must not render a public 'permanently closed' page for it. False for every other status, and for an expired location removed without a recorded reason."
         media:
           type: "array"
           items:
@@ -13305,6 +13308,7 @@ components:
       required:
         - "id"
         - "isClaimed"
+        - "isHiddenByRemovalReason"
         - "type"
         - "media"
         - "photos"
