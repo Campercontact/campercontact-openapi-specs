@@ -7957,6 +7957,40 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PublicFavoriteLocationListResponse"
+  /v1/locations/{sitecode}/nearby-pois:
+    get:
+      description: "GET /v1/locations/{sitecode}/nearby-pois <br> Every stored nearby POI of one location with all the data Magic Lane sent, for the moderation portal. Distances are measured from where the location is now. <br> Only for CamperContact admins (CC_LOCATION_ADMIN), not for moderators."
+      parameters:
+        - name: "sitecode"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK. Empty lists and no fetchedAround when the location was never fetched."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NearbyPoisDetailsResponse"
+        "400":
+          description: "Bad Request"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no location with this site code."
+          content:
+            text/plain:
+              schema:
+                type: "string"
   /v1/locations/{sitecode}/nearby-pois/refresh:
     post:
       description: "POST /v1/locations/{sitecode}/nearby-pois/refresh <br> Fetches the nearby POIs of one location from Magic Lane right away and stores them, even when the stored ones are still fresh. Used from the moderation portal to try the data on a few locations before the backfill. <br> Only for CamperContact admins (CC_LOCATION_ADMIN), not for moderators."
@@ -13043,6 +13077,62 @@ components:
         - "category"
         - "name"
         - "distanceMeters"
+    NearbyPoisDetailsResponse:
+      type: "object"
+      properties:
+        fetchedAround:
+          description: "Coordinates of the last fetch. Null when the location was never fetched."
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/GeoLocationResponse"
+        isFetchedNearLocation:
+          description: "Whether the app shows these POIs. False when the location moved 500 m or more since the last fetch. A location without coordinates counts as near."
+          type: "boolean"
+        whatsNearby:
+          description: "Every stored What's nearby result, nearest first."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/NearbyPoiDetailsResponse"
+        attractions:
+          description: "Every stored attraction candidate, nearest first."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/NearbyPoiDetailsResponse"
+      required:
+        - "isFetchedNearLocation"
+        - "whatsNearby"
+        - "attractions"
+    NearbyPoiDetailsResponse:
+      type: "object"
+      properties:
+        category:
+          $ref: "#/components/schemas/NearbyPoiCategory"
+        name:
+          type: "string"
+        distanceMeters:
+          description: "Straight-line distance from the location, in metres."
+          type: "integer"
+          format: "int32"
+        location:
+          $ref: "#/components/schemas/GeoLocationResponse"
+        providerCategory:
+          description: "Magic Lane's place type (its description field)."
+          type: "string"
+          nullable: true
+        providerData:
+          description: "The result exactly as Magic Lane sent it (address, contact, entrance, ...). Null for POIs stored before it was kept."
+          type: "object"
+          additionalProperties: true
+          nullable: true
+        isShownInApp:
+          description: "Whether the app and website show this POI in What's nearby or Top attractions."
+          type: "boolean"
+      required:
+        - "category"
+        - "name"
+        - "distanceMeters"
+        - "location"
+        - "isShownInApp"
     NearbyPoiCategory:
       type: "string"
       enum:
@@ -13212,7 +13302,7 @@ components:
           description: "Reason a moderator gave when removing this location, stored on the location itself. Only set when status is 'expired', and null when it was removed without a recorded reason, which includes everything closed before the reason was captured. The matching internal note is written separately and does not affect this value."
         isHiddenByRemovalReason:
           type: "boolean"
-          description: "True when this location was removed for a reason that is not a real closure (owner request, duplicate, merged, does not exist, does not meet criteria). Clients must not render a public 'permanently closed' page for it. False for every other status, and for an expired location removed without a recorded reason."
+          description: "True when this closed location must stay hidden: an expired location removed for a reason that is not a real closure (owner request, duplicate, merged, does not exist, does not meet criteria), or an inactive Campspace location, which the Campspace import sets inactive when it stops qualifying. Clients must not render a public closed page for it. False for every other status, for an expired location removed without a recorded reason, and for other inactive locations. The name predates the Campspace case."
         media:
           type: "array"
           items:
