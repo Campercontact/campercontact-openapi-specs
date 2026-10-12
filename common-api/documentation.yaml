@@ -10689,6 +10689,10 @@ components:
           $ref: "#/components/schemas/LocationStatus"
           nullable: true
           description: "Current status of the location, so clients can label closed stops"
+        isHiddenFromUsers:
+          type: boolean
+          description: "True when the location was rejected, removed for a reason that is not a real closure, or is an inactive Campspace location. Show the stop without a link to the location page, rating or closed label. Unlike isHiddenByRemovalReason on the location page, this is also true for rejected locations."
+          example: false
         isClaimed:
           type: boolean
           description: "Whether the location is claimed by its owner (has a paid subscription)"
@@ -10712,6 +10716,7 @@ components:
           nullable: true
           description: "Capacity and stay limits"
       required:
+        - isHiddenFromUsers
         - isClaimed
         - rating
         - numberOfReviews
