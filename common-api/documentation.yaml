@@ -10852,6 +10852,11 @@ components:
           items:
             $ref: "#/components/schemas/Coordinate"
           description: "List of route coordinates for drawing the route on a map"
+        encodedPolyline:
+          type: string
+          nullable: true
+          description: "The route as an encoded polyline (precision 5), simplified to at most 600 points so it fits in a URL. Pass it as `polyline` to the search proxy's `GET /search/results/route`."
+          example: "oos~Hoaz\\~tu@o|k@ne`@~~{B"
     ToggleReactionRequest:
       type: object
       required:
