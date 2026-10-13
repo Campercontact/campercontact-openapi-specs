@@ -334,6 +334,144 @@ paths:
                 $ref: '#/components/schemas/ListResponse'
         '501':
           description: Not Implemented
+  /search/tripplanner/map:
+    get:
+      summary: Trip planner markers along a route
+      description: |
+        Returns a marker for every location within a corridor around a route, without clustering,
+        for the trip planner map. Markers only carry what the map needs; load a location's details
+        with `/search/results/preview` when a marker is tapped.
+
+        At most 2000 markers are returned, premium locations first. `total` holds the full count,
+        so a client can tell when the cap was hit.
+
+        Markers carry no prices, so `persons`/`babies`/`pets` are not supported (400);
+        `fromDate`/`toDate` only filter on opening periods.
+      tags:
+        - Trip planner
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/xFeatureFlags'
+        - name: polyline
+          in: query
+          required: true
+          description: Route as an encoded polyline (precision 5) with at least 2 distinct and at most 1000 points (latitude strictly between -90 and 90, longitude between -180 and 180), typically `encodedPolyline` from common-api `GET /v1/tripplanner/route`.
+          schema:
+            type: string
+          example: '_gk|H_qo]?_ibE'
+        - name: corridorKm
+          in: query
+          required: false
+          description: Distance in km on each side of the route to search within.
+          schema:
+            type: number
+            minimum: 0.5
+            maximum: 25
+            default: 4
+        - $ref: '#/components/parameters/filter.poiType'
+        - $ref: '#/components/parameters/filter.isBookable'
+        - $ref: '#/components/parameters/filter.rating'
+        - $ref: '#/components/parameters/filter.numberOfReviews'
+        - $ref: '#/components/parameters/filter.price'
+        - $ref: '#/components/parameters/filter.fromDate'
+        - $ref: '#/components/parameters/filter.toDate'
+        - $ref: '#/components/parameters/filter.maxCamperSpots'
+        - $ref: '#/components/parameters/filter.maxCamperLength'
+        - $ref: '#/components/parameters/filter.maxStay'
+        - $ref: '#/components/parameters/filter.surroundings'
+        - $ref: '#/components/parameters/filter.discounts'
+        - $ref: '#/components/parameters/filter.amenities'
+        - $ref: '#/components/parameters/filter.terrain'
+        - $ref: '#/components/parameters/filter.dogsAllowed'
+        - $ref: '#/components/parameters/filter.campingBehaviourAllowed'
+        - $ref: '#/components/parameters/filter.nudityAllowed'
+        - $ref: '#/components/parameters/filter.sitecodes'
+      responses:
+        '200':
+          description: Markers along the route returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripplannerMapResponse'
+        '400':
+          description: Invalid polyline or filter parameters
+  /search/tripplanner/list:
+    get:
+      summary: Trip planner locations along a route, paginated
+      description: |
+        Returns one page of locations within a corridor around a route, for the trip planner list.
+        Same response as `/search/results/list`, including realtime Travelbase prices for the page.
+
+        No Travelbase availability pre-filter is done: `fromDate`/`toDate` filter on opening periods,
+        and together with `persons`/`babies`/`pets` they are used for the realtime prices.
+
+        When `sortBy=distance`, both `sortLocationLat` and `sortLocationLon` are required;
+        omitting either returns 400.
+      tags:
+        - Trip planner
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - $ref: '#/components/parameters/xFeatureFlags'
+        - name: polyline
+          in: query
+          required: true
+          description: Route as an encoded polyline (precision 5) with at least 2 distinct and at most 1000 points (latitude strictly between -90 and 90, longitude between -180 and 180), typically `encodedPolyline` from common-api `GET /v1/tripplanner/route`.
+          schema:
+            type: string
+          example: '_gk|H_qo]?_ibE'
+        - name: corridorKm
+          in: query
+          required: false
+          description: Distance in km on each side of the route to search within.
+          schema:
+            type: number
+            minimum: 0.5
+            maximum: 25
+            default: 4
+        - $ref: '#/components/parameters/offset'
+        - name: limit
+          in: query
+          required: false
+          description: The limit of the results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - $ref: '#/components/parameters/filter.poiType'
+        - $ref: '#/components/parameters/filter.isBookable'
+        - $ref: '#/components/parameters/filter.rating'
+        - $ref: '#/components/parameters/filter.numberOfReviews'
+        - $ref: '#/components/parameters/filter.price'
+        - $ref: '#/components/parameters/filter.fromDate'
+        - $ref: '#/components/parameters/filter.toDate'
+        - $ref: '#/components/parameters/filter.persons'
+        - $ref: '#/components/parameters/filter.babies'
+        - $ref: '#/components/parameters/filter.pets'
+        - $ref: '#/components/parameters/filter.maxCamperSpots'
+        - $ref: '#/components/parameters/filter.maxCamperLength'
+        - $ref: '#/components/parameters/filter.maxStay'
+        - $ref: '#/components/parameters/filter.surroundings'
+        - $ref: '#/components/parameters/filter.discounts'
+        - $ref: '#/components/parameters/filter.amenities'
+        - $ref: '#/components/parameters/filter.terrain'
+        - $ref: '#/components/parameters/filter.dogsAllowed'
+        - $ref: '#/components/parameters/filter.campingBehaviourAllowed'
+        - $ref: '#/components/parameters/filter.nudityAllowed'
+        - $ref: '#/components/parameters/filter.sitecodes'
+        - $ref: '#/components/parameters/sort.by'
+        - $ref: '#/components/parameters/sort.order'
+        - $ref: '#/components/parameters/sort.sortLocationLat'
+        - $ref: '#/components/parameters/sort.sortLocationLon'
+      responses:
+        '200':
+          description: Locations along the route returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '400':
+          description: Invalid polyline, filter or pagination parameters
   /search/results/preview:
     get:
       summary: Get a location preview by ID, sitecode, or coordinates
@@ -1062,6 +1200,22 @@ components:
         markers:
           type: array
           description: The individual locations to render on the map
+          items:
+            $ref: '#/components/schemas/LocationMapMarker'
+    TripplannerMapResponse:
+      type: object
+      properties:
+        total:
+          type: object
+          description: Number of locations within the corridor, also when it exceeds the marker cap
+          properties:
+            value:
+              type: integer
+            relation:
+              type: string
+              enum: [eq, gte]
+        markers:
+          type: array
           items:
             $ref: '#/components/schemas/LocationMapMarker'
     LocationMapCluster:
