@@ -15745,7 +15745,6 @@ components:
           type: "string"
         gender:
           type: "string"
-          nullable: true
           enum: ["MALE", "FEMALE", "OTHER"]
         language:
           type: "string"
@@ -15758,6 +15757,7 @@ components:
         - "screenName"
         - "password"
         - "confirmPassword"
+        - "gender"
         - "language"
         - "privacyStatement"
     ValidateUserRequest:
