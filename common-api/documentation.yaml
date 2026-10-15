@@ -9104,6 +9104,66 @@ paths:
                 $ref: "#/components/schemas/RouteInfoResponse"
         "400":
           description: "Bad request - less than 2 locations or coordinates not found"
+  /v1/tripplanner/route:
+    get:
+      summary: "Driving route for the trip planner"
+      description: "Calculates the driving route between a start and an end point. Open to every Firebase user, including anonymous ones, because the trip planner is available to anonymous Pro+ users. Always a single Mapbox Directions call."
+      tags:
+        - Trip planner
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startLat
+          in: query
+          required: true
+          description: "Latitude of the start point"
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: startLon
+          in: query
+          required: true
+          description: "Longitude of the start point"
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: endLat
+          in: query
+          required: true
+          description: "Latitude of the end point"
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: endLon
+          in: query
+          required: true
+          description: "Longitude of the end point"
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+      responses:
+        "200":
+          description: "Route calculated successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripPlannerRouteResponse"
+        "400":
+          description: "Missing or out-of-range coordinates, or no route found between start and end"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Caller has no Firebase token"
   /v1/journeys/{id}:
     get:
       summary: "Get journey by ID"
@@ -10689,6 +10749,10 @@ components:
           $ref: "#/components/schemas/LocationStatus"
           nullable: true
           description: "Current status of the location, so clients can label closed stops"
+        isHiddenFromUsers:
+          type: boolean
+          description: "True when the location was rejected, removed for a reason that is not a real closure, or is an inactive Campspace location. Show the stop without a link to the location page, rating or closed label. Unlike isHiddenByRemovalReason on the location page, this is also true for rejected locations."
+          example: false
         isClaimed:
           type: boolean
           description: "Whether the location is claimed by its owner (has a paid subscription)"
@@ -10712,6 +10776,7 @@ components:
           nullable: true
           description: "Capacity and stay limits"
       required:
+        - isHiddenFromUsers
         - isClaimed
         - rating
         - numberOfReviews
@@ -10852,6 +10917,38 @@ components:
           items:
             $ref: "#/components/schemas/Coordinate"
           description: "List of route coordinates for drawing the route on a map"
+    TripPlannerRouteResponse:
+      type: object
+      required:
+        - distanceMeters
+        - durationSeconds
+        - coordinates
+        - encodedPolyline
+      properties:
+        distanceMeters:
+          type: number
+          description: "Route distance in meters"
+        durationSeconds:
+          type: number
+          description: "Estimated driving time in seconds"
+        coordinates:
+          type: array
+          items:
+            $ref: "#/components/schemas/TripPlannerRouteCoordinate"
+          description: "Full route geometry for drawing the route on a map"
+        encodedPolyline:
+          type: string
+          description: "The route as an encoded polyline (precision 5), simplified to at most 600 points so it fits in a URL. Pass it as `polyline` to the search proxy's `GET /search/tripplanner/map` and `GET /search/tripplanner/list`."
+    TripPlannerRouteCoordinate:
+      type: object
+      required:
+        - lat
+        - lon
+      properties:
+        lat:
+          type: number
+        lon:
+          type: number
     ToggleReactionRequest:
       type: object
       required:
