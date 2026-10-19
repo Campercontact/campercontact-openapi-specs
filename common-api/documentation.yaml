@@ -926,15 +926,6 @@ paths:
             '*/*':
               schema:
                 type: "object"
-        "400":
-          description: "Validation error. Error codes: 4007 location does not exist, 4022 a subscription\
-            \ cannot be bought for the location's status, 4006 the location already has a subscription."
-          content:
-            application/json:
-              schema:
-                type: "array"
-                items:
-                  $ref: "#/components/schemas/ErrorMessage"
   /v1/b2b/buy-subscription/validate/subscription-info:
     post:
       description: "POST /v1/b2b/buy-subscription/validate/subscription-info <br>\
