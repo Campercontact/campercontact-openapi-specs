@@ -3695,6 +3695,29 @@ paths:
                 items:
                   $ref: "#/components/schemas/PendingChangeRequestsByLocationResponse"
 
+  /v1/change-requests/pending/count:
+    get:
+      description: "GET /v1/change-requests/pending/count <br> Retrieves the total number of pending change requests and the number of distinct locations they belong to, not limited by locationLimit. <br> Requires moderator, customer service or location super admin permissions."
+      responses:
+        "401":
+          description: "Unauthorized"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "403":
+          description: "Forbidden"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingChangeRequestsCountResponse"
+
   /v1/locations/import:
     put:
       description: ""
@@ -7991,6 +8014,52 @@ paths:
             text/plain:
               schema:
                 type: "string"
+  /v1/locations/{sitecode}/nearby-pois/shown:
+    put:
+      description: "PUT /v1/locations/{sitecode}/nearby-pois/shown <br> Sets the POIs the location detail shows, in order, from the stored candidates (the ids in the details response). The next fetch replaces them with its own ranked selection. <br> Only for CamperContact admins (CC_LOCATION_ADMIN), not for moderators."
+      parameters:
+        - name: "sitecode"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateShownNearbyPoisRequest"
+        required: true
+      responses:
+        "200":
+          description: "OK. The details after the change."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NearbyPoisDetailsResponse"
+        "400":
+          description: "Bad Request: a list is missing, holds more than 5 ids, repeats one, or holds something that is not a UUID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no location with this site code."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "422":
+          description: "Unprocessable Entity: the location has no nearby POIs for where it is now (never fetched, or moved 500 m or more), or an id is not one of its candidates in that list."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/locations/{sitecode}/nearby-pois/refresh:
     post:
       description: "POST /v1/locations/{sitecode}/nearby-pois/refresh <br> Fetches the nearby POIs of one location from Magic Lane right away and stores them, even when the stored ones are still fresh. Used from the moderation portal to try the data on a few locations before the backfill. <br> Only for CamperContact admins (CC_LOCATION_ADMIN), not for moderators."
@@ -13147,12 +13216,12 @@ components:
       type: "object"
       properties:
         whatsNearby:
-          description: "At most 5 places: the closest one of each category, nearest first."
+          description: "At most 5 places in the order to show them, chosen when the POIs were fetched: one per slot (groceries, restaurant, public transport, ski, ...), best score first, so not nearest first. An admin can change the choice until the next fetch. Fewer than 5 when not enough places are within twice their range."
           type: "array"
           items:
             $ref: "#/components/schemas/NearbyPoiResponse"
         topAttractions:
-          description: "The 5 closest attractions not shown in whatsNearby, nearest first."
+          description: "At most 5 attractions not shown in whatsNearby, in the order to show them, chosen when the POIs were fetched: best score first, at most 2 per category. An admin can change the choice until the next fetch. Empty when fewer than 2 qualify; clients then hide the block."
           type: "array"
           items:
             $ref: "#/components/schemas/NearbyPoiResponse"
@@ -13186,7 +13255,7 @@ components:
           description: "Whether the app shows these POIs. False when the location moved 500 m or more since the last fetch. A location without coordinates counts as near."
           type: "boolean"
         whatsNearby:
-          description: "Every stored What's nearby result, nearest first."
+          description: "Every stored What's nearby candidate (the 5 nearest per category), nearest first."
           type: "array"
           items:
             $ref: "#/components/schemas/NearbyPoiDetailsResponse"
@@ -13202,6 +13271,10 @@ components:
     NearbyPoiDetailsResponse:
       type: "object"
       properties:
+        id:
+          description: "Id of this candidate, for PUT /v1/locations/{sitecode}/nearby-pois/shown. A new fetch gives every candidate a new id."
+          type: "string"
+          format: "uuid"
         category:
           $ref: "#/components/schemas/NearbyPoiCategory"
         name:
@@ -13221,31 +13294,69 @@ components:
           type: "object"
           additionalProperties: true
           nullable: true
+        shownPosition:
+          description: "1-based position in What's nearby or Top attractions. Null when this POI is not shown."
+          type: "integer"
+          format: "int32"
+          nullable: true
         isShownInApp:
-          description: "Whether the app and website show this POI in What's nearby or Top attractions."
+          description: "Whether the app and website show this POI now: it is shown, and the location has not moved 500 m or more since the fetch."
           type: "boolean"
       required:
+        - "id"
         - "category"
         - "name"
         - "distanceMeters"
         - "location"
         - "isShownInApp"
+    UpdateShownNearbyPoisRequest:
+      type: "object"
+      properties:
+        whatsNearby:
+          description: "Ids of What's nearby candidates, in the order to show them. At most 5, no repeats."
+          type: "array"
+          maxItems: 5
+          items:
+            type: "string"
+            format: "uuid"
+        topAttractions:
+          description: "Ids of attraction candidates, in the order to show them. At most 5, no repeats."
+          type: "array"
+          maxItems: 5
+          items:
+            type: "string"
+            format: "uuid"
+      required:
+        - "whatsNearby"
+        - "topAttractions"
     NearbyPoiCategory:
       type: "string"
+      description: "Named after the Magic Lane category the place was found with. Clients translate it."
       enum:
-        - "supermarket"
+        - "grocery"
         - "bakery"
         - "restaurant"
-        - "pharmacy"
-        - "petrol_station"
-        - "public_transport"
+        - "bar"
+        - "winery"
+        - "butcher"
+        - "public_transit_stop"
+        - "bus_station"
+        - "train_station"
+        - "ferry_terminal"
+        - "bicycle_rental"
+        - "ski_lift"
+        - "ski_resort"
+        - "golf_course"
+        - "swimming_pool"
         - "tourist_attraction"
         - "museum"
-        - "monument"
-        - "viewpoint"
         - "national_park"
+        - "historical_monument"
         - "amusement_park"
         - "animal_park"
+        - "archaeological_site"
+        - "viewpoint"
+        - "recreation_area"
     ContactDetailsResponse:
       type: "object"
       properties:
@@ -14039,6 +14150,21 @@ components:
             $ref: "#/components/schemas/ChangeRequestResponse"
       required:
         - "locationId"
+        - "changeRequests"
+    PendingChangeRequestsCountResponse:
+      type: "object"
+      description: "Total number of pending change requests"
+      properties:
+        locations:
+          type: "integer"
+          format: "int64"
+          description: "Number of distinct locations with at least one pending change request"
+        changeRequests:
+          type: "integer"
+          format: "int64"
+          description: "Total number of pending change requests"
+      required:
+        - "locations"
         - "changeRequests"
     Filters:
       type: "object"
