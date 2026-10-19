@@ -11889,6 +11889,9 @@ components:
           type: "string"
         country:
           type: "string"
+        countryCode:
+          type: ["string", "null"]
+          description: "ISO 3166-1 alpha-2 code of `country`, set by the server. Null when the country is unknown."
         line1:
           type: "string"
       required:
@@ -11926,6 +11929,9 @@ components:
         country:
           type: "string"
           description: "Country name"
+        countryCode:
+          type: ["string", "null"]
+          description: "ISO 3166-1 alpha-2 code of `country`, set by the server. Null when the country is unknown."
         line1:
           type: "string"
           description: "Computed field: street + house number"
