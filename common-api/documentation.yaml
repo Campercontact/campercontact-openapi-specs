@@ -3695,29 +3695,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/PendingChangeRequestsByLocationResponse"
 
-  /v1/change-requests/pending/count:
-    get:
-      description: "GET /v1/change-requests/pending/count <br> Retrieves the total number of pending change requests and the number of distinct locations they belong to, not limited by locationLimit. <br> Requires moderator, customer service or location super admin permissions."
-      responses:
-        "401":
-          description: "Unauthorized"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-        "403":
-          description: "Forbidden"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-        "200":
-          description: "OK"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PendingChangeRequestsCountResponse"
-
   /v1/locations/import:
     put:
       description: ""
@@ -14062,21 +14039,6 @@ components:
             $ref: "#/components/schemas/ChangeRequestResponse"
       required:
         - "locationId"
-        - "changeRequests"
-    PendingChangeRequestsCountResponse:
-      type: "object"
-      description: "Total number of pending change requests"
-      properties:
-        locations:
-          type: "integer"
-          format: "int64"
-          description: "Number of distinct locations with at least one pending change request"
-        changeRequests:
-          type: "integer"
-          format: "int64"
-          description: "Total number of pending change requests"
-      required:
-        - "locations"
         - "changeRequests"
     Filters:
       type: "object"
