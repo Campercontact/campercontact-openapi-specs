@@ -241,6 +241,32 @@ paths:
           description: Invalid input
         '500':
           description: Server error
+  /search/b2b/suggestions:
+    get:
+      summary: Get location suggestions for buying a B2B subscription
+      description: >
+        Returns only POIs (no cities, regions or countries) whose status allows buying a B2B subscription.
+        The indexed status must be ACTIVE, NEW or IMPORTED; IN_PROGRESS is indexed as NEW and REVIEWING as ACTIVE.
+        Locations that already have a paid subscription are not filtered out. Used by the B2B onboarding flow.
+      parameters:
+        - $ref: '#/components/parameters/acceptLanguage'
+        - in: query
+          name: query
+          required: true
+          description: The search query (location name or sitecode)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location suggestions returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionLocationResponse'
+        '400':
+          description: Invalid input
+        '500':
+          description: Server error
   /search/results/map:
     get:
       summary: Search for locations to show on a map
