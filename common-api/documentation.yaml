@@ -8311,6 +8311,97 @@ paths:
               examples:
                 Example#1:
                   value: "500: Internal Server Error"
+  /v2/reviews/me:
+    get:
+      summary: "Get My Reviews"
+      description: "The caller's own reviews across all locations, newest first (by created). Replies\
+        \ and deleted reviews are left out. stats covers all of the caller's live reviews and does\
+        \ not change with offset or limit. Requires a user JWT."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "offset"
+          in: "query"
+          required: false
+          description: "Number of reviews to skip. 0 or more."
+          schema:
+            type: "integer"
+            format: "int64"
+            minimum: 0
+            default: 0
+        - name: "limit"
+          in: "query"
+          required: false
+          description: "Maximum number of reviews to return. Between 1 and 50."
+          schema:
+            type: "integer"
+            format: "int32"
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetrieveMyReviewsResponse"
+              examples:
+                Example#1:
+                  value:
+                    items:
+                      - id: "6f1c2a7e-3b9d-4c1e-9a55-0d2f7c1b8e44"
+                        rating: 4
+                        originalLocale: "nl"
+                        text: "Rustige plek, schoon sanitair."
+                        originalText: "Rustige plek, schoon sanitair."
+                        user:
+                          displayName: "Sanne"
+                          profilePhoto: null
+                          slug: "sanne"
+                        created: "2026-09-12T08:14:03Z"
+                        modified: "2026-09-12T08:14:03Z"
+                        replyId: null
+                        isPinned: false
+                        recommendedFlow: null
+                        removalReason: null
+                        removalReasonMessage: null
+                        sitecode: "78621"
+                        editedAt: null
+                    total: 12
+                    offset: 0
+                    limit: 10
+                    stats:
+                      reviewsWritten: 12
+                      averageRating: 4.4
+                      totalLikes: null
+        "400":
+          description: "Bad Request: offset or limit is not a whole number, offset is negative, or limit\
+            \ is outside 1..50."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ErrorMessage"
+        "403":
+          description: "Forbidden: no valid user JWT."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: "Forbidden"
+        "500":
+          description: "Internal Server Error"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: "500: Internal Server Error"
   /v2/reviews/{sitecode}:
     post:
       description: "Create a review. The text field is optional: omit it or send an empty\
@@ -12534,6 +12625,14 @@ components:
           type: "string"
           nullable: true
           description: "The moderator's own wording, set when removalReason is 'other'."
+        sitecode:
+          type: ["string", "null"]
+          description: "Sitecode of the reviewed location. Set on every /v2 endpoint; null on /v1."
+        editedAt:
+          type: ["string", "null"]
+          description: "When the author last changed the text or rating, as an ISO-8601 instant. Null when\
+            \ the review was never edited. Use this for \"Edited on\", not modified: imported reviews\
+            \ carry a modified copied from Mendix."
       required:
         - "id"
         - "rating"
@@ -12542,6 +12641,58 @@ components:
         - "user"
         - "created"
         - "modified"
+    RetrieveMyReviewsResponse:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            allOf:
+              - $ref: "#/components/schemas/ReviewResponse"
+              - type: "object"
+                properties:
+                  sitecode:
+                    type: "string"
+                required:
+                  - "sitecode"
+        total:
+          type: "integer"
+          format: "int64"
+          description: "All of the caller's live reviews, not just this page."
+        offset:
+          type: "integer"
+          format: "int64"
+        limit:
+          type: "integer"
+          format: "int32"
+        stats:
+          $ref: "#/components/schemas/MyReviewStatsResponse"
+      required:
+        - "items"
+        - "total"
+        - "offset"
+        - "limit"
+        - "stats"
+    MyReviewStatsResponse:
+      type: "object"
+      description: "Covers all of the caller's live reviews. Does not change with paging."
+      properties:
+        reviewsWritten:
+          type: "integer"
+          format: "int64"
+        averageRating:
+          type: ["number", "null"]
+          format: "double"
+          description: "Rounded to one decimal. Ratings of 0 or null (legacy imports) are left out.\
+            \ Null when no review has a rating."
+        totalLikes:
+          type: ["integer", "null"]
+          format: "int64"
+          description: "Always null until review likes ship (CC-2844)."
+      required:
+        - "reviewsWritten"
+        - "averageRating"
+        - "totalLikes"
     ReviewContributionResponse:
       type: "object"
       description: "Lightweight review response for user contributions containing only essential fields"
