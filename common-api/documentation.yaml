@@ -8111,6 +8111,58 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: "A Magic Lane call failed. The stored POIs are unchanged."
+  /v1/locations/{sitecode}/host-questions:
+    post:
+      description: "POST /v1/locations/{sitecode}/host-questions <br> Sends the host of a location a question from the logged-in camper. The question is stored, and a HOST_QUESTION_CREATED event on the location topic makes the Customer.io lambda email it to the host, with a copy to the camper. <br> Allowed when the location is bookable, not booked through Campspace, not closed or hidden, and has a contact email or a manager. metaData.canAskHost on the location detail tells the same. <br> A camper can send at most 10 questions in 24 hours."
+      parameters:
+        - name: "sitecode"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHostQuestionRequest"
+        required: true
+      responses:
+        "201":
+          description: "Created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateHostQuestionResponse"
+        "400":
+          description: "Bad Request: the question is blank or longer than 450 characters after trimming, or a topic is unknown or repeated."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no location with this site code."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "422":
+          description: "Unprocessable Entity: questions can't be sent to this location (code 5036), or the camper's account has no email address (code 5038)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: "Too Many Requests: the camper sent 10 questions in the last 24 hours (code 5037)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/webhooks/preload-geo-data:
     post:
       description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. Fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now. <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
@@ -13105,6 +13157,9 @@ components:
           type: "boolean"
         showNearbyLocations:
           type: "boolean"
+        canAskHost:
+          type: "boolean"
+          description: "Whether campers can send this location's host a question (POST /v1/locations/{sitecode}/host-questions). Only reliable on GET /v1/locations/{sitecode} and GET /v1/locations/query; other routes may send any value."
       required:
         - "subscriptionType"
         - "hasSubscription"
@@ -13116,6 +13171,7 @@ components:
         - "maxVideoUploadSize"
         - "isBookable"
         - "showNearbyLocations"
+        - "canAskHost"
     LocationFilterResponse:
       type: "object"
       properties:
@@ -13227,6 +13283,34 @@ components:
             - "left_for_backfill"
       required:
         - "outcome"
+    CreateHostQuestionRequest:
+      type: "object"
+      properties:
+        topics:
+          type: "array"
+          description: "What the question is about; may be empty, each topic at most once."
+          items:
+            type: "string"
+            enum:
+              - "availability"
+              - "location"
+              - "facilities"
+              - "prices"
+              - "other"
+        question:
+          type: "string"
+          description: "1 to 450 characters after trimming. Stored trimmed."
+      required:
+        - "topics"
+        - "question"
+    CreateHostQuestionResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+      required:
+        - "id"
     NearbyPoisResponse:
       type: "object"
       properties:
