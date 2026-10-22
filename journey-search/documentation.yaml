@@ -45,6 +45,23 @@ paths:
             type: string
           example: "abc-123,def-456"
 
+        - name: q
+          in: query
+          description: |
+            Free-text search. Matches journeys where:
+            - every word is a word or word prefix in the journey name or a destination name
+              (e.g. `norw adv` matches "Norway Nature Adventure"),
+            - the author's username contains the text (case-insensitive), or
+            - the journey ID equals the text.
+            Combines with all other filters (AND logic), including `isFeatured`.
+            With `sortBy=relevance`, results are sorted by match score first.
+            Leading/trailing whitespace is trimmed; an empty value is ignored.
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          example: "norway"
+
         - name: tags
           in: query
           description: |
@@ -137,9 +154,10 @@ paths:
           in: query
           description: |
             Filter journeys by featured status.
-            When provided, all other filters (tags, countries, distance, duration, sortBy)
+            When provided without `q`, all other filters (tags, countries, distance, duration, sortBy)
             are ignored and only `isFeatured` + `isPublic` filtering is applied.
             Results are sorted by relevance (total reactions, then creation date).
+            When provided together with `q`, it is combined with all other filters and `sortBy`.
             When omitted, no filtering on featured status is applied.
           required: false
           schema:
@@ -151,7 +169,7 @@ paths:
           description: |
             Sort order for results. Defaults to `relevance`.
             - `relevance`: scores journeys by total reactions (views and other signals will be added in the future).
-              Uses `createdAt` descending as a tiebreaker.
+              Uses `createdAt` descending as a tiebreaker. When `q` is provided, the match score is used first.
             - `newest`: sorts by creation date descending.
           required: false
           schema:
