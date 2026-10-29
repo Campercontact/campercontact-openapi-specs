@@ -1456,8 +1456,20 @@ components:
             reshape its own chart.
 
     PreviewResponse:
-      type: object
-      $ref: '#/components/schemas/LocationDetailed'
+      allOf:
+        - $ref: '#/components/schemas/LocationDetailed'
+        - type: object
+          properties:
+            photos:
+              type: array
+              nullable: true
+              maxItems: 5
+              items:
+                type: string
+              description: >
+                Up to 5 photo URLs in the order of the location page gallery, for the preview
+                card carousel. Null when the location has no photos, and missing for documents
+                indexed before the field existed; fall back to `thumbnail`.
     PoiSuggestion:
       type: object
       description: A POI (location) suggestion from ElasticSearch
