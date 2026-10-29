@@ -8170,12 +8170,7 @@ paths:
         content:
           application/json:
             schema:
-              type: "array"
-              description: "What the EventBridge Pipe sends for a batch of one SQS message."
-              minItems: 1
-              maxItems: 1
-              items:
-                $ref: "#/components/schemas/FetchNearbyPoisRequest"
+              $ref: "#/components/schemas/FetchNearbyPoisRequest"
         required: true
       responses:
         "200":
@@ -8185,7 +8180,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/PreloadGeoDataResponse"
         "400":
-          description: "Bad Request: not exactly one record, or the location id is not a UUID."
+          description: "Bad Request: the location id is not a UUID."
           content:
             application/json:
               schema:
