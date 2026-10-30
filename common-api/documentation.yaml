@@ -6690,6 +6690,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReviewReplyResponse"
+  /v1/media/status:
+    get:
+      description: "GET /v1/media/status <br> Returns the upload status and analysis\
+        \ time of the media stored under an S3 key. Internal endpoint for the image-analyzer\
+        \ Lambda, authenticated by an API key in the x-api-key header. Responses are\
+        \ never cached."
+      summary: "Retrieve Media Status"
+      parameters:
+        - name: "x-api-key"
+          in: "header"
+          required: true
+          description: "The image-analyzer API key."
+          schema:
+            type: "string"
+        - name: "key"
+          in: "query"
+          required: true
+          description: "The S3 key of the file, <basepath>/<name>."
+          schema:
+            type: "string"
+          example: "media/photos/location/5f0c2b1e-8d7a-4c3b-9e21-6a4f0d9b7c10/ffdf7c89-9d2c-41c6-a46f-a761a17c5040.jpeg"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetrieveMediaStatusResponse"
+        "400":
+          description: "Validation error - The key is missing or has no <basepath>/<name> form"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Unauthorized - No valid x-api-key"
+        "404":
+          description: "Not Found - No media is stored under the key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/reviews/{reviewId}/analysis:
     post:
       description: "POST /v1/reviews/{reviewId}/analysis <br> Posts analysis information\
@@ -16146,6 +16188,26 @@ components:
           type: "string"
           nullable: true
       description: "Request body for validating user registration data. Both fields are optional, allowing partial validation."
+    RetrieveMediaStatusResponse:
+      type: "object"
+      properties:
+        mediaId:
+          type: "string"
+          format: "uuid"
+        status:
+          type: "string"
+          description: "available or uploading."
+        displayType:
+          type: "string"
+        analysedAt:
+          type: "string"
+          format: "date-time"
+          nullable: true
+          description: "When the analysis was saved; null until the photo is analysed."
+      required:
+        - "mediaId"
+        - "status"
+        - "displayType"
     ReviewAnalysisRequest:
       type: "object"
       properties:
