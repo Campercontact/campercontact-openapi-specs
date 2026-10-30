@@ -8165,17 +8165,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /v1/webhooks/preload-geo-data:
     post:
-      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. Fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now. <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
+      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now, and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{lat}_{lon}.webp (coordinates rounded to five decimals, so a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
       requestBody:
         content:
           application/json:
             schema:
-              type: "array"
-              description: "What the EventBridge Pipe sends for a batch of one SQS message."
-              minItems: 1
-              maxItems: 1
-              items:
-                $ref: "#/components/schemas/FetchNearbyPoisRequest"
+              $ref: "#/components/schemas/FetchNearbyPoisRequest"
         required: true
       responses:
         "200":
@@ -8183,9 +8178,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FetchNearbyPoisResponse"
+                $ref: "#/components/schemas/PreloadGeoDataResponse"
         "400":
-          description: "Bad Request: not exactly one record, or the location id is not a UUID."
+          description: "Bad Request: the location id is not a UUID."
           content:
             application/json:
               schema:
@@ -8193,7 +8188,7 @@ paths:
         "401":
           description: "Unauthorized"
         "500":
-          description: "The fetch failed. The queue delivers the message again, and after 5 attempts moves it to the dead-letter queue."
+          description: "The fetch or the render failed. The queue delivers the message again, and after 5 attempts moves it to the dead-letter queue."
   /v1/webhooks/b2b-subscriptions/sync:
     post:
       description: "POST /v1/webhooks/b2b-subscriptions/sync <br> Syncs the Stripe\
@@ -13421,10 +13416,10 @@ components:
       required:
         - "locationId"
         - "reason"
-    FetchNearbyPoisResponse:
+    PreloadGeoDataResponse:
       type: "object"
       properties:
-        outcome:
+        nearbyPois:
           type: "string"
           enum:
             - "fetched"
@@ -13432,8 +13427,15 @@ components:
             - "no_coordinates"
             - "still_fresh"
             - "left_for_backfill"
+        mapImage:
+          type: "string"
+          enum:
+            - "rendered"
+            - "no_coordinates"
+            - "location_not_found"
       required:
-        - "outcome"
+        - "nearbyPois"
+        - "mapImage"
     CreateHostQuestionRequest:
       type: "object"
       properties:
@@ -13838,7 +13840,7 @@ components:
         mapPhotoUrl:
           type: "string"
           nullable: true
-          description: "URL of a static map image (default roadmap style) centred on the location, with a marker on it. Null when the location has no coordinates."
+          description: "URL of the location's stored map image (Magic Lane render, 1280x800 WebP, centred on the location with a pin on it) on the images host, served through the image scaler at width 1250. The path holds the location id and its rounded coordinates, so the URL changes when the location moves. Null when the location has no coordinates. The image is rendered when the location is created or moved and by the backfill; until then the URL answers 404 and clients show their fallback."
         nearbyPois:
           nullable: true
           $ref: "#/components/schemas/NearbyPoisResponse"
