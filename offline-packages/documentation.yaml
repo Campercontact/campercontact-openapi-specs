@@ -43,6 +43,8 @@ components:
         lastUpdatedDate:
           type: string
           format: date-time
+          nullable: true
+          description: When the package data was last rebuilt. Null when it cannot be determined.
           example: "2021-06-30T17:53:14.531Z"
         approximateFileSizeInKb:
           type: integer
