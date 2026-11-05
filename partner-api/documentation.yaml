@@ -941,7 +941,11 @@ components:
         totalAvailableSpots:
           type: integer
           nullable: true
-          description: Sum of available spots across all pitch types in this response. Null when no pitch data is available.
+          description: |
+            Sum of available spots across all pitch types in this response.
+            0 for a bookable location means availability was checked and there are no available spots
+            for the requested stay. Null means availability was not checked (no valid date and duration
+            given) or no pitch data is available.
           example: 30
           minimum: 0
         pitches:
@@ -949,7 +953,11 @@ components:
           items:
             $ref: '#/components/schemas/PitchPrice'
           nullable: true
-          description: Array of available pitch types and their pricing. If null, the location is closed or has no available spots.
+          description: |
+            Array of available pitch types and their pricing.
+            For a bookable Travelbase location with a valid date and duration, an empty array means
+            availability was checked and nothing is available for the requested stay. Null means
+            availability was not checked or no pitch data is available for the location.
 
     InsertLocationPhotoRequest:
       type: object
