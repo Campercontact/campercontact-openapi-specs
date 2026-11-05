@@ -6732,6 +6732,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/media/{mediaId}/analysis:
+    put:
+      description: "PUT /v1/media/{mediaId}/analysis <br> Saves the image-analyzer's result\
+        \ for a media, replacing an earlier one. The other metadata of the media is kept.\
+        \ Internal endpoint for the image-analyzer Lambda, authenticated by an API key in\
+        \ the x-api-key header. Responses are never cached."
+      summary: "Save Media Analysis"
+      parameters:
+        - name: "x-api-key"
+          in: "header"
+          required: true
+          description: "The image-analyzer API key."
+          schema:
+            type: "string"
+        - name: "mediaId"
+          in: "path"
+          required: true
+          description: "The media id from the status response."
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveMediaAnalysisRequest"
+      responses:
+        "204":
+          description: "No Content - The analysis is saved"
+        "400":
+          description: "Validation error - The media id is not a UUID, or the body is invalid"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Unauthorized - No valid x-api-key"
+        "404":
+          description: "Not Found - No media has the id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/reviews/{reviewId}/analysis:
     post:
       description: "POST /v1/reviews/{reviewId}/analysis <br> Posts analysis information\
@@ -16208,6 +16252,82 @@ components:
         - "mediaId"
         - "status"
         - "displayType"
+    SaveMediaAnalysisRequest:
+      type: "object"
+      properties:
+        state:
+          type: "string"
+          enum: [ analysed, failed ]
+        reason:
+          type: "string"
+          nullable: true
+          description: "Why the analysis failed. Required when state is failed."
+        source:
+          type: "string"
+          nullable: true
+          enum: [ original, variant ]
+          description: "variant when a resized copy from the output bucket was analysed\
+            \ instead of the original. Defaults to original."
+        quality:
+          type: "object"
+          nullable: true
+          description: "Raw quality values measured with sharp; width and height are\
+            \ of the original, in pixels."
+          properties:
+            sharpness:
+              type: "number"
+              format: "double"
+              nullable: true
+              minimum: 0
+            brightness:
+              type: "number"
+              format: "double"
+              nullable: true
+              minimum: 0
+              maximum: 255
+            entropy:
+              type: "number"
+              format: "double"
+              nullable: true
+              minimum: 0
+              maximum: 8
+            width:
+              type: "integer"
+              format: "int32"
+              nullable: true
+              minimum: 1
+            height:
+              type: "integer"
+              format: "int32"
+              nullable: true
+              minimum: 1
+        category:
+          type: "string"
+          nullable: true
+        tags:
+          type: "array"
+          description: "Keys from the fixed tag list, e.g. viewFromPitch or grass. Not\
+            \ checked against the list until the list is final."
+          items:
+            type: "string"
+        aiScore:
+          type: "number"
+          format: "double"
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: "The AI model's own score. The final score is calculated by the\
+            \ API, not sent by the analyzer."
+        modelId:
+          type: "string"
+          nullable: true
+        promptVersion:
+          type: "integer"
+          format: "int32"
+          nullable: true
+          minimum: 1
+      required:
+        - "state"
     ReviewAnalysisRequest:
       type: "object"
       properties:
