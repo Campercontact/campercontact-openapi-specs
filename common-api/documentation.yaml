@@ -12622,17 +12622,6 @@ components:
         createdAt:
           type: "string"
           nullable: true
-        metadata:
-          nullable: true
-          type: "object"
-          description: "Additive facts about the media item. Null when none apply."
-          properties:
-            manuallyOrderedAt:
-              type: "string"
-              format: "date-time"
-              nullable: true
-              description: "When a moderator last dragged this item into position. Null when its order\
-                \ has only ever been assigned automatically."
       required:
         - "id"
         - "order"
