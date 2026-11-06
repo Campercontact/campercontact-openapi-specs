@@ -1055,6 +1055,14 @@ components:
           description: >
             The source name supplied in `InsertLocationPhotoRequest.sourceType`, normalized to lowercase.
             Null when it was omitted.
+        category:
+          type: string
+          nullable: true
+          enum: [ site_overview, pitch, sanitary, amenities, entrance_reception, view_surroundings, recreation_food, other_relevant, not_relevant, null ]
+          description: >
+            What the photo shows. We set it when we analyse the photo, which happens after the upload,
+            so it is always null in this response.
+          example: null
 
     PitchPrice:
       type: object
