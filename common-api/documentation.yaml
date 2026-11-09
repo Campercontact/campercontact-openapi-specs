@@ -12619,6 +12619,13 @@ components:
           enum: [ user, qenner, folder_import, open_arial, panoramax, campio ]
           description: Where the media came from. `user` for uploads by a Campercontact user, otherwise the
             external system it was imported from. Null for legacy items with neither.
+        category:
+          type: string
+          nullable: true
+          enum: [ site_overview, pitch, sanitary, amenities, entrance_reception, view_surroundings, recreation_food, other_relevant, not_relevant ]
+          description: What the photo shows, from the photo analysis. Null when the photo is not analysed yet
+            or the analysis failed. Only location photos are analysed, so other media has no category.
+            The client translates the code.
         createdAt:
           type: "string"
           nullable: true
@@ -16163,16 +16170,6 @@ components:
           format: "int32"
           nullable: true
           description: "Sync schema version of the Nominatim lookup. Compare against the current version to detect stale records."
-        cityId:
-          type: "string"
-          nullable: true
-          description: "OSM type letter plus id of the city, e.g. R271110. Key of the city destination page."
-          example: "R271110"
-        regionId:
-          type: "string"
-          nullable: true
-          description: "OSM type letter plus id of the region (state; province in BE, canton in LU). Null where the country has no region level. Key of the region destination page."
-          example: "R47654"
     LimitsResponse:
       type: "object"
       properties:
@@ -16303,6 +16300,8 @@ components:
         category:
           type: "string"
           nullable: true
+          enum: [ site_overview, pitch, sanitary, amenities, entrance_reception, view_surroundings, recreation_food, other_relevant, not_relevant ]
+          description: "One of the fixed photo categories. Any other value is rejected with 400."
         tags:
           type: "array"
           description: "Keys from the fixed tag list, e.g. viewFromPitch or grass. Not\
