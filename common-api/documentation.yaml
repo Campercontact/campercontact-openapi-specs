@@ -6736,8 +6736,9 @@ paths:
     put:
       description: "PUT /v1/media/{mediaId}/analysis <br> Saves the image-analyzer's result\
         \ for a media, replacing an earlier one. The other metadata of the media is kept.\
-        \ Internal endpoint for the image-analyzer Lambda, authenticated by an API key in\
-        \ the x-api-key header. Responses are never cached."
+        \ While the photo score order is on, every location of the media is then reindexed\
+        \ in search. Internal endpoint for the image-analyzer Lambda, authenticated by an\
+        \ API key in the x-api-key header. Responses are never cached."
       summary: "Save Media Analysis"
       parameters:
         - name: "x-api-key"
