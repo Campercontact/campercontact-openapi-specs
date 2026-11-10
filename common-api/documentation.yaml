@@ -1014,7 +1014,7 @@ paths:
                 $ref: "#/components/schemas/B2bPortalSessionResponse"
   /v1/b2b/locations/{sitecode}:
     put:
-      description: "PUT /v1/b2b/locations/{sitecode} <br> Updates the booking system, subscription, or external system IDs for a location. <br> Requires moderator or location super admin permissions. <br> Request Body: <br> - UpdateB2bLocationRequest: At least one of bookingSystem (BookingType), subscription (SubmissionType), or externalSystemIds must be provided. <br> -- SubmissionType options: free, bronze, basic, bookable, boost, silver, premium, ultimate. <br> -- BookingType options: travel_base, camperpay, booking_request, campspace, none. <br> -- externalSystemIds: Object with supported keys 'campspace', 'camperpay'. <br> Response: <br> - 200 OK: Returns the updated location."
+      description: "PUT /v1/b2b/locations/{sitecode} <br> Updates the booking system, subscription, or external system IDs for a location. <br> Requires moderator or location super admin permissions. <br> Request Body: <br> - UpdateB2bLocationRequest: At least one of bookingSystem (BookingType), subscription (SubmissionType), or externalSystemIds must be provided. <br> -- SubmissionType options: free, bronze, basic, bookable, boost, silver, premium, ultimate. <br> -- BookingType options: campercontact, camperpay, booking_request, campspace, none. <br> -- externalSystemIds: Object with supported keys 'campspace', 'camperpay'. <br> Response: <br> - 200 OK: Returns the updated location."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -11874,7 +11874,7 @@ components:
       type: "string"
       description: "Supported booking systems."
       enum:
-        - "travel_base"
+        - "campercontact"
         - "camperpay"
         - "booking_request"
         - "campspace"
@@ -13887,11 +13887,11 @@ components:
         bookingSystem:
           type: "string"
           enum:
-            - "TRAVEL_BASE"
-            - "CAMPERPAY"
-            - "BOOKING_REQUEST"
-            - "CAMPSPACE"
-            - "NONE"
+            - "campercontact"
+            - "camperpay"
+            - "booking_request"
+            - "campspace"
+            - "none"
         externalSystemIds:
           $ref: "#/components/schemas/ExternalSystemIds"
         prices:
@@ -14517,11 +14517,11 @@ components:
         type:
           type: "string"
           enum:
-            - "TRAVEL_BASE"
-            - "CAMPERPAY"
-            - "BOOKING_REQUEST"
-            - "CAMPSPACE"
-            - "NONE"
+            - "campercontact"
+            - "camperpay"
+            - "booking_request"
+            - "campspace"
+            - "none"
         isLocationBookable:
           type: "boolean"
       required:
