@@ -16173,6 +16173,16 @@ components:
           format: "int32"
           nullable: true
           description: "Sync schema version of the Nominatim lookup. Compare against the current version to detect stale records."
+        cityId:
+          type: "string"
+          nullable: true
+          description: "OSM type letter plus id of the city, e.g. R271110. Key of the city destination page."
+          example: "R271110"
+        regionId:
+          type: "string"
+          nullable: true
+          description: "OSM type letter plus id of the region shown in the address breadcrumb (state, province or canton, as Nominatim names it). A city-state is its own region. Null where the address has no region. Key of the region destination page."
+          example: "R47654"
     LimitsResponse:
       type: "object"
       properties:
