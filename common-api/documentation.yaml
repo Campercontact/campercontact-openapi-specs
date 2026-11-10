@@ -6736,8 +6736,9 @@ paths:
     put:
       description: "PUT /v1/media/{mediaId}/analysis <br> Saves the image-analyzer's result\
         \ for a media, replacing an earlier one. The other metadata of the media is kept.\
-        \ Internal endpoint for the image-analyzer Lambda, authenticated by an API key in\
-        \ the x-api-key header. Responses are never cached."
+        \ While the photo score order is on, every location of the media is then reindexed\
+        \ in search. Internal endpoint for the image-analyzer Lambda, authenticated by an\
+        \ API key in the x-api-key header. Responses are never cached."
       summary: "Save Media Analysis"
       parameters:
         - name: "x-api-key"
@@ -8251,17 +8252,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /v1/webhooks/preload-geo-data:
     post:
-      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. Fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now. <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
+      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now, and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots and a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
       requestBody:
         content:
           application/json:
             schema:
-              type: "array"
-              description: "What the EventBridge Pipe sends for a batch of one SQS message."
-              minItems: 1
-              maxItems: 1
-              items:
-                $ref: "#/components/schemas/FetchNearbyPoisRequest"
+              $ref: "#/components/schemas/FetchNearbyPoisRequest"
         required: true
       responses:
         "200":
@@ -8269,9 +8265,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/FetchNearbyPoisResponse"
+                $ref: "#/components/schemas/PreloadGeoDataResponse"
         "400":
-          description: "Bad Request: not exactly one record, or the location id is not a UUID."
+          description: "Bad Request: the location id is not a UUID."
           content:
             application/json:
               schema:
@@ -8279,7 +8275,7 @@ paths:
         "401":
           description: "Unauthorized"
         "500":
-          description: "The fetch failed. The queue delivers the message again, and after 5 attempts moves it to the dead-letter queue."
+          description: "The fetch or the render failed. The queue delivers the message again, and after 5 attempts moves it to the dead-letter queue."
   /v1/webhooks/b2b-subscriptions/sync:
     post:
       description: "POST /v1/webhooks/b2b-subscriptions/sync <br> Syncs the Stripe\
@@ -12619,6 +12615,13 @@ components:
           enum: [ user, qenner, folder_import, open_arial, panoramax, campio ]
           description: Where the media came from. `user` for uploads by a Campercontact user, otherwise the
             external system it was imported from. Null for legacy items with neither.
+        category:
+          type: string
+          nullable: true
+          enum: [ site_overview, pitch, sanitary, amenities, entrance_reception, view_surroundings, recreation_food, other_relevant, not_relevant ]
+          description: What the photo shows, from the photo analysis. Null when the photo is not analysed yet
+            or the analysis failed. Only location photos are analysed, so other media has no category.
+            The client translates the code.
         createdAt:
           type: "string"
           nullable: true
@@ -13496,10 +13499,10 @@ components:
       required:
         - "locationId"
         - "reason"
-    FetchNearbyPoisResponse:
+    PreloadGeoDataResponse:
       type: "object"
       properties:
-        outcome:
+        nearbyPois:
           type: "string"
           enum:
             - "fetched"
@@ -13507,8 +13510,15 @@ components:
             - "no_coordinates"
             - "still_fresh"
             - "left_for_backfill"
+        mapImage:
+          type: "string"
+          enum:
+            - "rendered"
+            - "no_coordinates"
+            - "location_not_found"
       required:
-        - "outcome"
+        - "nearbyPois"
+        - "mapImage"
     CreateHostQuestionRequest:
       type: "object"
       properties:
@@ -13913,7 +13923,7 @@ components:
         mapPhotoUrl:
           type: "string"
           nullable: true
-          description: "URL of a static map image (default roadmap style) centred on the location, with a marker on it. Null when the location has no coordinates."
+          description: "URL of the location's stored map image (Magic Lane render, 1280x800 WebP, centred on the location with a pin on it) on the images host, served through the image scaler at width 1250. The path holds the location id and its coordinates in whole 1e-5 degree units, so the URL changes when the location moves. Null when the location has no coordinates. The image is rendered when the location is created or moved and by the backfill; until then the URL answers 404 and clients show their fallback."
         nearbyPois:
           nullable: true
           $ref: "#/components/schemas/NearbyPoisResponse"
@@ -16163,16 +16173,6 @@ components:
           format: "int32"
           nullable: true
           description: "Sync schema version of the Nominatim lookup. Compare against the current version to detect stale records."
-        cityId:
-          type: "string"
-          nullable: true
-          description: "OSM type letter plus id of the city, e.g. R271110. Key of the city destination page."
-          example: "R271110"
-        regionId:
-          type: "string"
-          nullable: true
-          description: "OSM type letter plus id of the region (state; province in BE, canton in LU). Null where the country has no region level. Key of the region destination page."
-          example: "R47654"
     LimitsResponse:
       type: "object"
       properties:
@@ -16303,6 +16303,8 @@ components:
         category:
           type: "string"
           nullable: true
+          enum: [ site_overview, pitch, sanitary, amenities, entrance_reception, view_surroundings, recreation_food, other_relevant, not_relevant ]
+          description: "One of the fixed photo categories. Any other value is rejected with 400."
         tags:
           type: "array"
           description: "Keys from the fixed tag list, e.g. viewFromPitch or grass. Not\
@@ -16317,6 +16319,16 @@ components:
           maximum: 1
           description: "The AI model's own score. The final score is calculated by the\
             \ API, not sent by the analyzer."
+        aiReason:
+          type: "string"
+          nullable: true
+          description: "The AI model's short explanation of its category and score.\
+            \ Not the same as reason, which says why the analysis failed."
+        hasText:
+          type: "boolean"
+          nullable: true
+          description: "True when the AI model saw readable text in the photo, such\
+            \ as signs or a screenshot."
         modelId:
           type: "string"
           nullable: true
