@@ -8252,7 +8252,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /v1/webhooks/preload-geo-data:
     post:
-      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now, and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots and a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
+      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now (skipped entirely for reason map_image_backfill), and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots and a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
       requestBody:
         content:
           application/json:
@@ -13492,10 +13492,12 @@ components:
           type: "string"
         reason:
           type: "string"
+          description: "map_image_backfill renders the map image only; the webhook skips the nearby POIs."
           enum:
             - "created"
             - "moved"
             - "backfill"
+            - "map_image_backfill"
       required:
         - "locationId"
         - "reason"
@@ -13510,6 +13512,7 @@ components:
             - "no_coordinates"
             - "still_fresh"
             - "left_for_backfill"
+            - "skipped"
         mapImage:
           type: "string"
           enum:
