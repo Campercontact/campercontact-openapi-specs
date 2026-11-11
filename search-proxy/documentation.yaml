@@ -426,9 +426,9 @@ paths:
       summary: Trip planner locations along a route, paginated
       description: |
         Returns one page of locations within a corridor around a route, for the trip planner list.
-        Same response as `/search/results/list`, including realtime Travelbase prices for the page.
+        Same response as `/search/results/list`, including realtime PMS prices for the page.
 
-        No Travelbase availability pre-filter is done: `fromDate`/`toDate` filter on opening periods,
+        No PMS availability pre-filter is done: `fromDate`/`toDate` filter on opening periods,
         and together with `persons`/`babies`/`pets` they are used for the realtime prices.
 
         When `sortBy=distance`, both `sortLocationLat` and `sortLocationLon` are required;
@@ -506,7 +506,7 @@ paths:
 
         **POI mode** (poi_id or sitecode): Returns a detailed location from ElasticSearch with price range information.
         When optional booking params are supplied (fromDate/toDate/persons/babies/pets; fromDate/toDate must be
-        provided together and toDate must be after fromDate) and the location is TravelBase-bookable, the response
+        provided together and toDate must be after fromDate) and the location is PMS-bookable, the response
         is enriched with a realtime price and priceBreakdown for that stay (same enrichment as /results/list).
         Without them, pricing falls back to a default today->tomorrow window.
 
@@ -747,6 +747,7 @@ components:
       in: header
       description: |
         The feature flags to enable, comma-separated (e.g. "microcamping,parking").
+        `pms` returns `filters.bookingSystem: campercontact-pms` instead of `travel_base`.
         This enum only documents which values the client may send — whether a
         given flag actually changes behavior is decided by the lambda's Flags
         registry (src/utils/featureFlags.ts), not by this schema.
@@ -757,7 +758,7 @@ components:
         type: array
         items:
           type: string
-          enum: [microcamping, parking]
+          enum: [microcamping, parking, pms]
     offset:
       name: offset
       in: query
@@ -942,7 +943,7 @@ components:
     filter.persons:
       name: persons
       in: query
-      description: Number of adults for Travelbase availability filtering. Only used when isBookable is true.
+      description: Number of adults for PMS availability filtering. Only used when isBookable is true.
       schema:
         type: integer
         minimum: 1
@@ -950,7 +951,7 @@ components:
     filter.babies:
       name: babies
       in: query
-      description: Number of babies for Travelbase availability filtering. Only used when isBookable is true.
+      description: Number of babies for PMS availability filtering. Only used when isBookable is true.
       schema:
         type: integer
         minimum: 0
@@ -958,7 +959,7 @@ components:
     filter.pets:
       name: pets
       in: query
-      description: Number of pets for Travelbase availability filtering. Only used when isBookable is true.
+      description: Number of pets for PMS availability filtering. Only used when isBookable is true.
       schema:
         type: integer
         minimum: 0
@@ -1053,12 +1054,12 @@ components:
     PriceBreakdown:
       type: object
       description: >
-        Price breakdown for TravelBase bookable locations. Only present when a realtime TravelBase price is available.
-        Contains the price with the TravelBase booking fee (EUR 2.50) subtracted.
+        Price breakdown for PMS bookable locations. Only present when a realtime PMS price is available.
+        Contains the price with the PMS booking fee (EUR 2.50) subtracted.
       properties:
         fee:
           type: number
-          description: The TravelBase booking fee in EUR that was subtracted from the total price.
+          description: The PMS booking fee in EUR that was subtracted from the total price.
           example: 2.5
         totalPrice:
           type: number
@@ -1178,7 +1179,7 @@ components:
                 /results/preview, which returns the location whatever its status.
             price:
               type: number
-              description: Current active price in EUR (coming from Travelbase)
+              description: Current active price in EUR (coming from PMS)
             prices:
               type: array
               items:
@@ -1201,11 +1202,17 @@ components:
               type: boolean
             isClaimed:
               type: boolean
+            bookingSystem:
+              type: string
+              enum: [travel_base, campercontact-pms, camperpay, booking_request, campspace, none]
+              description: >
+                Booking system of the location. `campercontact-pms` (Campercontact PMS) is returned instead of
+                `travel_base` when the `pms` feature flag is sent; `travel_base` will be removed later.
         priceRange:
           $ref: '#/components/schemas/PriceRange'
         price:
           type: number
-          description: Realtime total price from TravelBase (includes the TravelBase booking fee).
+          description: Realtime total price from PMS (includes the PMS booking fee).
         priceBreakdown:
           $ref: '#/components/schemas/PriceBreakdown'
         metaData:
