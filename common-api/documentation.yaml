@@ -1014,7 +1014,7 @@ paths:
                 $ref: "#/components/schemas/B2bPortalSessionResponse"
   /v1/b2b/locations/{sitecode}:
     put:
-      description: "PUT /v1/b2b/locations/{sitecode} <br> Updates the booking system, subscription, or external system IDs for a location. <br> Requires moderator or location super admin permissions. <br> Request Body: <br> - UpdateB2bLocationRequest: At least one of bookingSystem (BookingType), subscription (SubmissionType), or externalSystemIds must be provided. <br> -- SubmissionType options: free, bronze, basic, bookable, boost, silver, premium, ultimate. <br> -- BookingType options: travel_base (Campercontact PMS; campercontact-pms is also accepted), camperpay, booking_request, campspace, none. <br> -- externalSystemIds: Object with supported keys 'campspace', 'camperpay'. <br> Response: <br> - 200 OK: Returns the updated location."
+      description: "PUT /v1/b2b/locations/{sitecode} <br> Updates the booking system, subscription, or external system IDs for a location. <br> Requires moderator or location super admin permissions. <br> Request Body: <br> - UpdateB2bLocationRequest: At least one of bookingSystem (BookingType), subscription (SubmissionType), or externalSystemIds must be provided. <br> -- SubmissionType options: free, bronze, basic, bookable, boost, silver, premium, ultimate. <br> -- BookingType options: travel_base, camperpay, booking_request, campspace, none. <br> -- externalSystemIds: Object with supported keys 'campspace', 'camperpay'. <br> Response: <br> - 200 OK: Returns the updated location."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -8252,7 +8252,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /v1/webhooks/preload-geo-data:
     post:
-      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now (skipped entirely for reason map_image_backfill), and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots and a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
+      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now, and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots and a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
       requestBody:
         content:
           application/json:
@@ -9202,6 +9202,300 @@ paths:
             text/plain:
               schema:
                 type: "string"
+  # ==================== DESTINATIONS ====================
+  /v1/moderation/destinations:
+    get:
+      summary: "List destinations"
+      description: "GET /v1/moderation/destinations <br> One page of destinations (country, region, city, custom), narrowed by country code and level, without boundaries. For the moderation portal's overview. <br> Only for moderators (MODERATOR, MODERATOR_CHIEF, CC_LOCATION_ADMIN)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "country"
+          in: "query"
+          required: false
+          description: "ISO 3166-1 alpha-2 country code, any case."
+          schema:
+            type: "string"
+        - name: "level"
+          in: "query"
+          required: false
+          schema:
+            $ref: "#/components/schemas/DestinationLevel"
+        - name: "offset"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            format: "int64"
+            default: 0
+        - name: "limit"
+          in: "query"
+          required: false
+          schema:
+            type: "integer"
+            default: 100
+            maximum: 500
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListDestinationsPageResponse"
+        "400":
+          description: "Bad Request: a filter is not a country code or a level, or offset or limit is out of range."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in, or not a moderator."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+  /v1/moderation/destinations/custom/candidates:
+    get:
+      summary: "Search OSM boundaries for a custom destination"
+      description: "GET /v1/moderation/destinations/custom/candidates?q=Zwarte Woud <br> OSM objects matching the query, to pick a boundary from in the custom destination wizard. Names in Dutch. At most 10 results. <br> Only for moderators (MODERATOR, MODERATOR_CHIEF, CC_LOCATION_ADMIN)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "q"
+          in: "query"
+          required: true
+          description: "Free text, at least 2 characters."
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/SearchBoundaryCandidatesResponse"
+        "400":
+          description: "Bad Request: q is missing or shorter than 2 characters."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in, or not a moderator."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "500":
+          description: "Internal Server Error: Nominatim did not answer."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+  /v1/moderation/destinations/custom:
+    post:
+      summary: "Create a custom destination"
+      description: "POST /v1/moderation/destinations/custom <br> Creates a custom destination (an area such as a lake or a landscape) under its home country. The country row is created with its OSM names when no location in that country was saved yet. The boundary is stored as a GeoJSON Polygon or MultiPolygon. <br> Only for moderators (MODERATOR, MODERATOR_CHIEF, CC_LOCATION_ADMIN)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomDestinationRequest"
+      responses:
+        "201":
+          description: "Created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateCustomDestinationResponse"
+        "400":
+          description: "Bad Request: validation errors, or a name that yields no slug."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in, or not a moderator."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "409":
+          description: "Conflict: a destination under the same country already uses one of the slugs."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "Unprocessable Entity: unknown country code, or the OSM object does not exist or has no area."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: "Internal Server Error: Nominatim did not answer."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+  /v1/moderation/destinations/{id}:
+    get:
+      summary: "Get one destination"
+      description: "GET /v1/moderation/destinations/{id} <br> One destination of any level. <br> Only for moderators (MODERATOR, MODERATOR_CHIEF, CC_LOCATION_ADMIN)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetrieveDestinationResponse"
+        "400":
+          description: "Bad Request: the id is not a UUID."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "403":
+          description: "Forbidden: not logged in, or not a moderator."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no destination with this id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: "Update a custom destination"
+      description: "PUT /v1/moderation/destinations/{id} <br> Replaces the names, and the slugs and boundary when given, of a custom destination. A slug that is not sent is kept, so a rename keeps the URL. Official destinations (country, region, city) cannot be changed here. <br> Only for moderators (MODERATOR, MODERATOR_CHIEF, CC_LOCATION_ADMIN)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomDestinationRequest"
+      responses:
+        "200":
+          description: "OK. The destination after the change."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateCustomDestinationResponse"
+        "400":
+          description: "Bad Request: validation errors or a name without a slug (JSON), or the id is not a UUID (text)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+            text/plain:
+              schema:
+                type: "string"
+        "403":
+          description: "Forbidden: not logged in, or not a moderator."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no destination with this id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "Conflict: the destination is an official one, or a sibling already uses one of the slugs."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "Unprocessable Entity: the OSM object does not exist or has no area."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: "Internal Server Error: Nominatim did not answer."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+    delete:
+      summary: "Delete a custom destination"
+      description: "DELETE /v1/moderation/destinations/{id} <br> Removes a custom destination. Official destinations cannot be deleted. <br> Only for moderators (MODERATOR, MODERATOR_CHIEF, CC_LOCATION_ADMIN)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "204":
+          description: "No Content"
+        "400":
+          description: "Bad Request: the id is not a UUID."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "403":
+          description: "Forbidden: not logged in, or not a moderator."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no destination with this id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "Conflict: the destination is an official one."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   # ==================== JOURNEYS ====================
   /v1/journeys:
     get:
@@ -10474,6 +10768,323 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    # ==================== DESTINATIONS SCHEMAS ====================
+    DestinationLevel:
+      type: "string"
+      enum:
+        - "country"
+        - "region"
+        - "city"
+        - "custom"
+    RetrieveDestinationResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          description: "OSM type letter plus id of an official region or city, as the location address stores it (R47654). Null for countries and custom destinations."
+          type: "string"
+          nullable: true
+        parentId:
+          description: "The country for a region or custom destination, the region for a city. Null for a country."
+          type: "string"
+          format: "uuid"
+          nullable: true
+        countryCode:
+          description: "Upper-case ISO 3166-1 alpha-2; the home country of a custom destination."
+          type: "string"
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          $ref: "#/components/schemas/MultiLanguageField"
+        boundary:
+          description: "GeoJSON Polygon or MultiPolygon of a custom destination. Null for official ones."
+          type: "object"
+          nullable: true
+        heroMediaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        intro:
+          $ref: "#/components/schemas/MultiLanguageField"
+        created:
+          type: "string"
+          format: "date-time"
+        modified:
+          type: "string"
+          format: "date-time"
+      required:
+        - "id"
+        - "level"
+        - "countryCode"
+        - "names"
+        - "slugs"
+        - "intro"
+        - "created"
+        - "modified"
+    CreateCustomDestinationResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          description: "OSM type letter plus id of an official region or city, as the location address stores it (R47654). Null for countries and custom destinations."
+          type: "string"
+          nullable: true
+        parentId:
+          description: "The country for a region or custom destination, the region for a city. Null for a country."
+          type: "string"
+          format: "uuid"
+          nullable: true
+        countryCode:
+          description: "Upper-case ISO 3166-1 alpha-2; the home country of a custom destination."
+          type: "string"
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          $ref: "#/components/schemas/MultiLanguageField"
+        boundary:
+          description: "GeoJSON Polygon or MultiPolygon of a custom destination. Null for official ones."
+          type: "object"
+          nullable: true
+        heroMediaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        intro:
+          $ref: "#/components/schemas/MultiLanguageField"
+        created:
+          type: "string"
+          format: "date-time"
+        modified:
+          type: "string"
+          format: "date-time"
+      required:
+        - "id"
+        - "level"
+        - "countryCode"
+        - "names"
+        - "slugs"
+        - "intro"
+        - "created"
+        - "modified"
+    UpdateCustomDestinationResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          description: "OSM type letter plus id of an official region or city, as the location address stores it (R47654). Null for countries and custom destinations."
+          type: "string"
+          nullable: true
+        parentId:
+          description: "The country for a region or custom destination, the region for a city. Null for a country."
+          type: "string"
+          format: "uuid"
+          nullable: true
+        countryCode:
+          description: "Upper-case ISO 3166-1 alpha-2; the home country of a custom destination."
+          type: "string"
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          $ref: "#/components/schemas/MultiLanguageField"
+        boundary:
+          description: "GeoJSON Polygon or MultiPolygon of a custom destination. Null for official ones."
+          type: "object"
+          nullable: true
+        heroMediaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        intro:
+          $ref: "#/components/schemas/MultiLanguageField"
+        created:
+          type: "string"
+          format: "date-time"
+        modified:
+          type: "string"
+          format: "date-time"
+      required:
+        - "id"
+        - "level"
+        - "countryCode"
+        - "names"
+        - "slugs"
+        - "intro"
+        - "created"
+        - "modified"
+    ListDestinationsResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          type: "string"
+          nullable: true
+        parentId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        countryCode:
+          type: "string"
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          $ref: "#/components/schemas/MultiLanguageField"
+        modified:
+          type: "string"
+          format: "date-time"
+      required:
+        - "id"
+        - "level"
+        - "countryCode"
+        - "names"
+        - "slugs"
+        - "modified"
+    ListDestinationsPageResponse:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ListDestinationsResponse"
+        total:
+          type: "integer"
+          format: "int64"
+        offset:
+          type: "integer"
+          format: "int64"
+        limit:
+          type: "integer"
+      required:
+        - "items"
+        - "total"
+        - "offset"
+        - "limit"
+    BoundaryInput:
+      type: "object"
+      description: "Exactly one of: polygon, osmId, or center with radiusKm."
+      properties:
+        polygon:
+          description: "GeoJSON Polygon or MultiPolygon; every ring closed with at least four positions."
+          type: "object"
+          nullable: true
+        osmId:
+          description: "OSM type letter plus id of a boundary, R3255371, as returned by the candidates search; its polygon is fetched from Nominatim."
+          type: "string"
+          nullable: true
+        center:
+          allOf:
+            - $ref: "#/components/schemas/Coordinate"
+          nullable: true
+        radiusKm:
+          description: "Radius around center in kilometres, above 0 and at most 200; stored as a circle polygon."
+          type: "number"
+          format: "double"
+          nullable: true
+    CreateCustomDestinationRequest:
+      type: "object"
+      properties:
+        names:
+          description: "Name per language; keys must be nl, de, fr, es, en or it."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          description: "URL segment per language: lower-case letters and digits joined by single hyphens. Per language with a name: the sent slug, else (on update) the stored one, else one made from the name. Only languages that have a name; a language dropped from names loses its slug."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+          nullable: true
+        countryCode:
+          description: "ISO 3166-1 alpha-2 of the home country, any case."
+          type: "string"
+        boundary:
+          $ref: "#/components/schemas/BoundaryInput"
+      required:
+        - "names"
+        - "countryCode"
+        - "boundary"
+    UpdateCustomDestinationRequest:
+      type: "object"
+      properties:
+        names:
+          description: "Name per language; keys must be nl, de, fr, es, en or it."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          description: "URL segment per language: lower-case letters and digits joined by single hyphens. Per language with a name: the sent slug, else (on update) the stored one, else one made from the name. Only languages that have a name; a language dropped from names loses its slug."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+          nullable: true
+        boundary:
+          description: "Replaces the stored area when given."
+          allOf:
+            - $ref: "#/components/schemas/BoundaryInput"
+          nullable: true
+      required:
+        - "names"
+    SearchBoundaryCandidatesResponse:
+      type: "object"
+      properties:
+        osmId:
+          description: "OSM type letter plus id; the value to send as boundary.osmId."
+          type: "string"
+        name:
+          type: "string"
+          nullable: true
+        displayName:
+          type: "string"
+          nullable: true
+        category:
+          description: "Nominatim category, such as boundary or natural."
+          type: "string"
+          nullable: true
+        type:
+          description: "Nominatim type, such as administrative or water."
+          type: "string"
+          nullable: true
+        boundingBox:
+          allOf:
+            - $ref: "#/components/schemas/BoundingBoxResponse"
+          nullable: true
+        isArea:
+          description: "Whether OSM has a polygon for it. A point or a line cannot become a destination boundary."
+          type: "boolean"
+      required:
+        - "osmId"
+        - "isArea"
+    BoundingBoxResponse:
+      type: "object"
+      properties:
+        south:
+          type: "number"
+          format: "double"
+        north:
+          type: "number"
+          format: "double"
+        west:
+          type: "number"
+          format: "double"
+        east:
+          type: "number"
+          format: "double"
+      required:
+        - "south"
+        - "north"
+        - "west"
+        - "east"
     # ==================== JOURNEYS SCHEMAS ====================
     CalculateRouteRequest:
       type: object
@@ -11872,10 +12483,9 @@ components:
             camperpay: "67890"
     BookingSystemType:
       type: "string"
-      description: "Supported booking systems. The Campercontact PMS is returned as `travel_base` until all clients accept `campercontact-pms`; requests accept both."
+      description: "Supported booking systems."
       enum:
         - "travel_base"
-        - "campercontact-pms"
         - "camperpay"
         - "booking_request"
         - "campspace"
@@ -13493,12 +14103,10 @@ components:
           type: "string"
         reason:
           type: "string"
-          description: "map_image_backfill renders the map image only; the webhook skips the nearby POIs."
           enum:
             - "created"
             - "moved"
             - "backfill"
-            - "map_image_backfill"
       required:
         - "locationId"
         - "reason"
@@ -13513,7 +14121,6 @@ components:
             - "no_coordinates"
             - "still_fresh"
             - "left_for_backfill"
-            - "skipped"
         mapImage:
           type: "string"
           enum:
@@ -13890,14 +14497,12 @@ components:
           nullable: true
         bookingSystem:
           type: "string"
-          description: "The Campercontact PMS is returned as `travel_base` until all clients accept `campercontact-pms`; requests accept both."
           enum:
-            - "travel_base"
-            - "campercontact-pms"
-            - "camperpay"
-            - "booking_request"
-            - "campspace"
-            - "none"
+            - "TRAVEL_BASE"
+            - "CAMPERPAY"
+            - "BOOKING_REQUEST"
+            - "CAMPSPACE"
+            - "NONE"
         externalSystemIds:
           $ref: "#/components/schemas/ExternalSystemIds"
         prices:
@@ -14523,12 +15128,11 @@ components:
         type:
           type: "string"
           enum:
-            - "travel_base"
-            - "campercontact-pms"
-            - "camperpay"
-            - "booking_request"
-            - "campspace"
-            - "none"
+            - "TRAVEL_BASE"
+            - "CAMPERPAY"
+            - "BOOKING_REQUEST"
+            - "CAMPSPACE"
+            - "NONE"
         isLocationBookable:
           type: "boolean"
       required:
