@@ -955,7 +955,7 @@ components:
           nullable: true
           description: |
             Array of available pitch types and their pricing.
-            For a bookable Travelbase location with a valid date and duration, an empty array means
+            For a bookable PMS location with a valid date and duration, an empty array means
             availability was checked and nothing is available for the requested stay. Null means
             availability was not checked or no pitch data is available for the location.
 
