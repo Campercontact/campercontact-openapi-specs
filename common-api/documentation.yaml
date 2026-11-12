@@ -1014,7 +1014,7 @@ paths:
                 $ref: "#/components/schemas/B2bPortalSessionResponse"
   /v1/b2b/locations/{sitecode}:
     put:
-      description: "PUT /v1/b2b/locations/{sitecode} <br> Updates the booking system, subscription, or external system IDs for a location. <br> Requires moderator or location super admin permissions. <br> Request Body: <br> - UpdateB2bLocationRequest: At least one of bookingSystem (BookingType), subscription (SubmissionType), or externalSystemIds must be provided. <br> -- SubmissionType options: free, bronze, basic, bookable, boost, silver, premium, ultimate. <br> -- BookingType options: travel_base (Campercontact PMS; campercontact-pms is also accepted), camperpay, booking_request, campspace, none. <br> -- externalSystemIds: Object with supported keys 'campspace', 'camperpay'. <br> Response: <br> - 200 OK: Returns the updated location."
+      description: "PUT /v1/b2b/locations/{sitecode} <br> Updates the booking system, subscription, or external system IDs for a location. <br> Requires moderator or location super admin permissions. <br> Request Body: <br> - UpdateB2bLocationRequest: At least one of bookingSystem (BookingType), subscription (SubmissionType), or externalSystemIds must be provided. <br> -- SubmissionType options: free, bronze, basic, bookable, boost, silver, premium, ultimate. <br> -- BookingType options: campercontact-pms (Campercontact PMS; the legacy travel_base is also accepted), camperpay, booking_request, campspace, none. <br> -- externalSystemIds: Object with supported keys 'campspace', 'camperpay'. <br> Response: <br> - 200 OK: Returns the updated location."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -3756,8 +3756,8 @@ paths:
                     message: "Locations imported successfully"
   /v1/locations/prices:
     get:
-      description: "GET /v1/locations/prices <br> Retrieves all pricing data for a location including location prices and TravelBase rental units.\
-        \ This is a separate endpoint for performance - TravelBase calls can be slow.\
+      description: "GET /v1/locations/prices <br> Retrieves all pricing data for a location including location prices and PMS rental units.\
+        \ This is a separate endpoint for performance - PMS calls can be slow.\
         \ <br> Query Parameters: <br> - sitecode: The sitecode of the location (required). <br> -\
         \ startDate: Start date (required, format: YYYY-MM-DD). <br> -\
         \ endDate: End date (required, format: YYYY-MM-DD). <br> -\
@@ -3831,7 +3831,7 @@ paths:
     get:
       description: "GET /v1/locations/query <br> Queries a location by poiId or sitecode.\
         \ Returns location details with optional price filtering by date range.\
-        \ For TravelBase rental unit pricing, use /v1/locations/prices endpoint.\
+        \ For PMS rental unit pricing, use /v1/locations/prices endpoint.\
         \ <br> Query Parameters: <br> - poi_id: The poiId of the location. <br> -\
         \ sitecode: The sitecode of the location. <br> -\
         \ startDate: Start date for price filtering (format: YYYY-MM-DD, optional). <br> -\
@@ -11872,7 +11872,7 @@ components:
             camperpay: "67890"
     BookingSystemType:
       type: "string"
-      description: "Supported booking systems. The Campercontact PMS is returned as `travel_base` until all clients accept `campercontact-pms`; requests accept both."
+      description: "Supported booking systems. The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
       enum:
         - "travel_base"
         - "campercontact-pms"
@@ -12339,12 +12339,12 @@ components:
       properties:
         id:
           type: "string"
-          description: "Travelbase's internal reference for the booking. Not guest-facing\
+          description: "PMS's internal reference for the booking. Not guest-facing\
             \ — show bookingNumber instead."
         bookingNumber:
           type: ["string", "null"]
           description: "The guest-facing booking reference, which guests are asked for\
-            \ on arrival and support uses to find a booking. Null when Travelbase has\
+            \ on arrival and support uses to find a booking. Null when PMS has\
             \ not assigned one to the order."
         arrivalDate:
           type: "string"
@@ -12354,14 +12354,14 @@ components:
           type: "string"
         rentalUnitName:
           type: "string"
-          description: "The rental unit's actual name. Previously this returned Travelbase's\
+          description: "The rental unit's actual name. Previously this returned PMS's\
             \ marketing tagline, which arrived as values like 'Camperplaats CAMPERPLAATS\
             \ 57-60M²'. Empty when the booking has no rental unit."
         accommodationSlug:
           type: ["string", "null"]
-          description: "Travelbase's slug for the accommodation, which is the Campercontact\
+          description: "PMS's slug for the accommodation, which is the Campercontact\
             \ sitecode — use it to link a booking to its location. Null when the booking\
-            \ has no rental unit, which Travelbase permits."
+            \ has no rental unit, which PMS permits."
         accommodationName:
           type: ["string", "null"]
           description: "The campsite's name — what the guest recognises the booking by.\
@@ -12374,7 +12374,7 @@ components:
           type: ["string", "null"]
           description: "The campsite's country, already resolved to a name in the language\
             \ of the Accept-Language header — 'Netherlands' in English, 'Nederland' in\
-            \ Dutch. Null when the booking has no rental unit, or when Travelbase sent\
+            \ Dutch. Null when the booking has no rental unit, or when PMS sent\
             \ a country code the JDK does not recognise."
         thumbnailUrl:
           type: ["string", "null"]
@@ -12384,8 +12384,8 @@ components:
           $ref: "#/components/schemas/BookingGuestsResponse"
         status:
           type: "string"
-          description: "Travelbase's status, mapped onto our own enum: recognised values\
-            \ pass through unchanged, anything else becomes 'unknown' — so a status Travelbase\
+          description: "PMS's status, mapped onto our own enum: recognised values\
+            \ pass through unchanged, anything else becomes 'unknown' — so a status PMS\
             \ adds later arrives as 'unknown' rather than verbatim. Use displayStatus\
             \ to decide what to show; this is kept for analytics and for clients that\
             \ have not migrated."
@@ -12403,11 +12403,11 @@ components:
         displayStatus:
           type: ["string", "null"]
           description: "How the booking should be presented, which is not always the\
-            \ status Travelbase stores. Travelbase has no notion of a stay being finished\
+            \ status PMS stores. PMS has no notion of a stay being finished\
             \ or a request having lapsed, so completed and expired are resolved here\
             \ from the dates, in Europe/Amsterdam — a client comparing the dates itself\
             \ would disagree for several hours a day. Null when the status has no user-facing\
-            \ meaning (init, waived, or anything Travelbase adds later), in which case\
+            \ meaning (init, waived, or anything PMS adds later), in which case\
             \ show no status line."
           enum:
             - "confirmed"
@@ -12470,7 +12470,7 @@ components:
       properties:
         rentalUnitId:
           type: "string"
-          description: "The TravelBase rental unit ID (e.g. tor_campercontact_prod.RentalUnit_1409)"
+          description: "The PMS rental unit ID (e.g. tor_campercontact_prod.RentalUnit_1409)"
         rentalUnitSlug:
           type: "string"
           description: "The rental unit slug (e.g. 43166-1)"
@@ -12517,7 +12517,7 @@ components:
       properties:
         cartId:
           type: "string"
-          description: "The TravelBase cart ID"
+          description: "The PMS cart ID"
         checkoutUrl:
           type: "string"
           description: "Direct URL to the checkout page for this cart"
@@ -13768,12 +13768,12 @@ components:
           type: "number"
           format: "double"
           nullable: true
-          description: "Lowest price per night from TravelBase rental units"
+          description: "Lowest price per night from PMS rental units"
         rentalUnits:
           type: "array"
           items:
             $ref: "#/components/schemas/RentalUnitPricingInfo"
-          description: "TravelBase rental units with pricing details"
+          description: "PMS rental units with pricing details"
       required:
         - "prices"
         - "rentalUnits"
@@ -13890,7 +13890,7 @@ components:
           nullable: true
         bookingSystem:
           type: "string"
-          description: "The Campercontact PMS is returned as `travel_base` until all clients accept `campercontact-pms`; requests accept both."
+          description: "The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
           enum:
             - "travel_base"
             - "campercontact-pms"
