@@ -319,7 +319,7 @@ paths:
                 type: string
   /v1/locations/{sitecode}/status:
     patch:
-      description: "Update the status of a location. Validates that the status transition is allowed based on business rules. Requires authentication and moderator permissions."
+      description: "Update the status of a location. Validates that the status transition is allowed based on business rules. Requires authentication and moderator permissions. Closing a bookable location ('inactive', 'expired' or 'denied') requires the admin role."
       parameters:
         - name: "sitecode"
           in: "path"
@@ -416,11 +416,18 @@ paths:
               schema:
                 type: string
         "403":
-          description: "Forbidden - User does not have moderator permissions"
+          description: "Forbidden - User does not have moderator permissions (text/plain), or a non-admin tried to set a bookable location (any booking system) to 'inactive', 'expired' or 'denied' (application/json, code 5039)"
           content:
             text/plain:
               schema:
                 type: string
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                errors:
+                  - message: "Only an admin can close a bookable location"
+                    code: 5039
         "404":
           description: "Location not found"
           content:
