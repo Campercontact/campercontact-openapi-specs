@@ -12393,6 +12393,14 @@ components:
           type: ["string", "null"]
           description: "A listing-sized image of the rental unit, for the booking card.\
             \ Null when the booking has no rental unit."
+        downloadVoucherUrl:
+          type: ["string", "null"]
+          description: "Travelbase's voucher PDF for this booking. Null when Travelbase\
+            \ has none; hide the download button then."
+        downloadOverviewUrl:
+          type: ["string", "null"]
+          description: "Travelbase's overview PDF for the whole order, so bookings in\
+            \ one order share the same URL. Null when Travelbase has none."
         guests:
           $ref: "#/components/schemas/BookingGuestsResponse"
         status:
@@ -12451,6 +12459,8 @@ components:
         - "accommodationPlace"
         - "accommodationCountry"
         - "thumbnailUrl"
+        - "downloadVoucherUrl"
+        - "downloadOverviewUrl"
         - "guests"
         - "status"
         - "displayStatus"
@@ -13955,7 +13965,7 @@ components:
         mapPhotoUrl:
           type: "string"
           nullable: true
-          description: "URL of the location's stored map image (Magic Lane render, 1280x800 WebP, centred on the location with a pin on it) on the images host, served through the image scaler at width 1250. The path holds the location id and its coordinates in whole 1e-5 degree units, so the URL changes when the location moves. Null when the location has no coordinates. The image is rendered when the location is created or moved and by the backfill; until then the URL answers 404 and clients show their fallback."
+          description: "URL of the location's stored map image (Magic Lane render, 1280x800 WebP, centred on the location with a pin on it) on the images host, served through the image scaler at width 1250. The path holds the location id and its coordinates in whole 1e-5 degree units, so the URL changes when the location moves. Null when the location has no coordinates. The image is rendered when the location is created or moved and by the backfill; until it exists in the bucket, the URL is a Google Static Maps image (640x400 at scale 2, zoom 14, centred on the location with a marker) instead."
         nearbyPois:
           nullable: true
           $ref: "#/components/schemas/NearbyPoisResponse"
