@@ -1208,6 +1208,14 @@ components:
               description: >
                 Booking system of the location. `campercontact-pms` (Campercontact PMS) is returned instead of
                 `travel_base` when the `pms` feature flag is sent; `travel_base` will be removed later.
+        maxStayHours:
+          type: integer
+          nullable: true
+          example: 72
+          description: >
+            Maximum stay in hours, the same value as `limits.maxStayHours` in the location API: 0 is
+            daytime parking only, 9999 is an unlimited stay, null is unknown. Absent on documents not
+            reindexed since this field was added; treat absent as null.
         priceRange:
           $ref: '#/components/schemas/PriceRange'
         price:
