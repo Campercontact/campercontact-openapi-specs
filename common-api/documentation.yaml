@@ -8265,7 +8265,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /v1/webhooks/preload-geo-data:
     post:
-      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now (skipped entirely for reason map_image_backfill), and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots and a moved location gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
+      description: "POST /v1/webhooks/preload-geo-data <br> Called by the EventBridge Pipe for each message on the preload-geo-data SQS queue. In parallel: fetches and stores the nearby POIs of the location unless the stored ones were fetched less than 500 m from where it is now (skipped entirely for reason map_image_backfill), and renders the location's map image with Magic Lane and stores it in the photo bucket under media/maps/{style}/{locationId}/{latE5}_{lonE5}.webp (coordinates in whole 1e-5 degree units, so the name has no dots; a moved location or a changed style gets a new key). <br> Basic auth with the credentials in the common-api-preload-geo-data-webhook-credentials secret. Must answer within 5 seconds."
       requestBody:
         content:
           application/json:
@@ -14700,6 +14700,54 @@ components:
       required:
         - "statusCode"
         - "message"
+    MotorhomeChassis:
+      type: "string"
+      description: "Chassis of a motorhome."
+      enum:
+        - "FIAT_DUCATO"
+        - "FORD"
+        - "IVECO"
+        - "MERCEDES_SPRINTER"
+        - "RENAULT"
+        - "VOLKSWAGEN"
+        - "OTHER"
+        - "UNKNOWN"
+    MotorhomeCategory:
+      type: "string"
+      description: "Body type of a motorhome."
+      enum:
+        - "BUSCAMPER"
+        - "ALKOOF"
+        - "HALFINTEGRAAL"
+        - "INTEGRAAL"
+        - "LINER"
+        - "UNKNOWN"
+    MotorhomePossession:
+      type: "string"
+      description: "Whether the user owns, rents or borrows the motorhome."
+      enum:
+        - "OWN"
+        - "OWN_AND_RENT_OUT"
+        - "RENT"
+        - "BORROW"
+        - "UNKNOWN"
+    Gender:
+      type: "string"
+      description: "Gender of a user."
+      enum:
+        - "MALE"
+        - "FEMALE"
+        - "OTHER"
+    TravelGroup:
+      type: "string"
+      description: "Who the user usually travels with."
+      enum:
+        - "PARTNERS"
+        - "SINGLES"
+        - "FAMILY_CHILDREN_ZERO_TO_TWELVE"
+        - "FAMILY_CHILDREN_TWELVE_PLUS"
+        - "FRIENDS"
+        - "UNKNOWN"
     MotorhomeResponse:
       type: "object"
       properties:
@@ -14726,33 +14774,11 @@ components:
             - "null"
           format: "int32"
         chassis:
-          type: "string"
-          enum:
-            - "FIAT_DUCATO"
-            - "FORD"
-            - "IVECO"
-            - "MERCEDES_SPRINTER"
-            - "RENAULT"
-            - "VOLKSWAGEN"
-            - "OTHER"
-            - "UNKNOWN"
+          $ref: "#/components/schemas/MotorhomeChassis"
         category:
-          type: "string"
-          enum:
-            - "BUSCAMPER"
-            - "ALKOOF"
-            - "HALFINTEGRAAL"
-            - "INTEGRAAL"
-            - "LINER"
-            - "UNKNOWN"
+          $ref: "#/components/schemas/MotorhomeCategory"
         possession:
-          type: "string"
-          enum:
-            - "OWN"
-            - "OWN_AND_RENT_OUT"
-            - "RENT"
-            - "BORROW"
-            - "UNKNOWN"
+          $ref: "#/components/schemas/MotorhomePossession"
         length:
           type:
             - "number"
@@ -14797,12 +14823,8 @@ components:
         lastName:
           type: "string"
         gender:
-          type: "string"
           nullable: true
-          enum:
-            - "MALE"
-            - "FEMALE"
-            - "OTHER"
+          $ref: "#/components/schemas/Gender"
         birthDate:
           type: "string"
           nullable: true
@@ -14821,15 +14843,8 @@ components:
           format: "int32"
           nullable: true
         travelGroup:
-          type: "string"
           nullable: true
-          enum:
-            - "PARTNERS"
-            - "SINGLES"
-            - "FAMILY_CHILDREN_ZERO_TO_TWELVE"
-            - "FAMILY_CHILDREN_TWELVE_PLUS"
-            - "FRIENDS"
-            - "UNKNOWN"
+          $ref: "#/components/schemas/TravelGroup"
         withPets:
           type: "boolean"
           nullable: true
@@ -14955,15 +14970,8 @@ components:
           type: "string"
           nullable: true
         travelGroup:
-          type: "string"
           nullable: true
-          enum:
-            - "PARTNERS"
-            - "SINGLES"
-            - "FAMILY_CHILDREN_ZERO_TO_TWELVE"
-            - "FAMILY_CHILDREN_TWELVE_PLUS"
-            - "FRIENDS"
-            - "UNKNOWN"
+          $ref: "#/components/schemas/TravelGroup"
         withPets:
           type: "boolean"
           nullable: true
@@ -15003,12 +15011,8 @@ components:
           type: "string"
           nullable: true
         gender:
-          type: "string"
           nullable: true
-          enum:
-            - "MALE"
-            - "FEMALE"
-            - "OTHER"
+          $ref: "#/components/schemas/Gender"
         birthDate:
           type: "string"
           format: "date"
@@ -15027,15 +15031,8 @@ components:
           format: "int32"
           nullable: true
         travelGroup:
-          type: "string"
           nullable: true
-          enum:
-            - "PARTNERS"
-            - "SINGLES"
-            - "FAMILY_CHILDREN_ZERO_TO_TWELVE"
-            - "FAMILY_CHILDREN_TWELVE_PLUS"
-            - "FRIENDS"
-            - "UNKNOWN"
+          $ref: "#/components/schemas/TravelGroup"
         withPets:
           type: "boolean"
           nullable: true
@@ -16248,9 +16245,8 @@ components:
         confirmPassword:
           type: "string"
         gender:
-          type: "string"
           nullable: true
-          enum: ["MALE", "FEMALE", "OTHER"]
+          $ref: "#/components/schemas/Gender"
         language:
           type: "string"
         privacyStatement:
