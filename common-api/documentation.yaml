@@ -8334,78 +8334,6 @@ paths:
             '*/*':
               schema:
                 type: "object"
-  /v1/webhooks/partners/users:
-    post:
-      description: "**POST /v1/webhooks/partners/users** <br> Activates a promotion\
-        \ code for a Mendix partner user. <br> Requires basic authentication with\
-        \ Mendix credentials. <br> Request Body: <br> - ActivateMendixPromoCodeBody:\
-        \ The details required to activate the promotion code. <br> Response: <br>\
-        \ - 200 OK: If the promotion code was successfully activated. <br> - 400 Bad\
-        \ Request: If the request body is missing required fields. <br> Errors: <br>\
-        \ - PartnerErrorCodes.MISSING_FIELDS_IN_REQUEST_BODY: Missing required fields\
-        \ in the request body."
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ActivateMendixPromoCodeBody"
-        required: true
-      responses:
-        "200":
-          description: "OK"
-          content:
-            '*/*':
-              schema:
-                type: "object"
-        "400":
-          description: "Bad Request"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-              examples:
-                Example#1:
-                  value: "400: Bad Request"
-                Example#2:
-                  value: "400: Bad Request"
-                Example#3:
-                  value: "400: Bad Request"
-                Example#4:
-                  value: ""
-            '*/*':
-              schema:
-                type: "array"
-                items:
-                  $ref: "#/components/schemas/ErrorMessage"
-              examples:
-                Example#1:
-                  description: ""
-                  value:
-                    errors: [ ]
-        "404":
-          description: "Not Found"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-        "403":
-          description: "Forbidden"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-              examples:
-                Example#1:
-                  value: "Forbidden"
-        "500":
-          description: "Internal Server Error"
-          content:
-            text/plain:
-              schema:
-                type: "string"
-              examples:
-                Example#1:
-                  value: "500: Internal Server Error"
   /v2/reviews/me:
     get:
       summary: "Get My Reviews"
@@ -16266,29 +16194,6 @@ components:
         - "periodEnd"
         - "priceId"
         - "isMoreThanOneProduct"
-    ActivateMendixPromoCodeBody:
-      type: "object"
-      properties:
-        userId:
-          type: "string"
-        promotionCode:
-          type: "string"
-        promotionCodeDescription:
-          type: "string"
-          nullable: true
-        emailAddress:
-          type: "string"
-        expirationDate:
-          type: "string"
-          format: "date-time"
-        displayName:
-          type: "string"
-      required:
-        - "userId"
-        - "promotionCode"
-        - "emailAddress"
-        - "expirationDate"
-        - "displayName"
     CreateReviewRequest:
       type: "object"
       properties:
