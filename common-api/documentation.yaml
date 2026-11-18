@@ -9197,6 +9197,44 @@ paths:
             text/plain:
               schema:
                 type: "string"
+  /v1/moderation/destinations/search:
+    get:
+      summary: "Search destinations by name"
+      description: "GET /v1/moderation/destinations/search?query=Zwarte <br> The best-matching destinations of any level whose name in any language contains query, ignoring case, for the moderation portal's search. At most 15, as a plain list without paging, like /search/suggestions/locations and /v1/userprofile/search. Exact matches first, then names starting with query, then the rest; within each country, region, city, custom. <br> Only for CC_LOCATION_ADMIN (internal staff)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "query"
+          in: "query"
+          required: true
+          description: "Free text, 2 to 100 characters (Unicode code points) after trimming; must not contain U+0000 (NUL). % and _ match themselves. The schema checks only the raw minimum length; the server enforces the full rule and answers 400."
+          schema:
+            type: "string"
+            minLength: 2
+      responses:
+        "200":
+          description: "OK: at most 15 destinations."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                maxItems: 15
+                items:
+                  $ref: "#/components/schemas/SearchDestinationsResponse"
+        "400":
+          description: "Bad Request: query is missing, not 2 to 100 characters after trimming, or contains U+0000 (NUL)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
+          content:
+            text/plain:
+              schema:
+                type: "string"
   /v1/moderation/destinations/custom/candidates:
     get:
       summary: "Search OSM boundaries for a custom destination"
@@ -10917,6 +10955,32 @@ components:
             - $ref: "#/components/schemas/BoundaryInput"
             - type: "null"
       required:
+        - "names"
+    SearchDestinationsResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        countryCode:
+          type: "string"
+        parentId:
+          type: ["string", "null"]
+          format: "uuid"
+        names:
+          description: "Every language, so the portal can show its own and the one that matched."
+          $ref: "#/components/schemas/MultiLanguageField"
+        parentNames:
+          description: "Names of the region of a city, or the country of a region or custom destination; null for a country."
+          oneOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+            - type: "null"
+      required:
+        - "id"
+        - "level"
+        - "countryCode"
         - "names"
     SearchBoundaryCandidatesResponse:
       type: "object"
