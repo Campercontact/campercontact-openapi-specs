@@ -12428,7 +12428,6 @@ components:
       type: "string"
       description: "Supported booking systems. The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
       enum:
-        - "travel_base"
         - "campercontact-pms"
         - "camperpay"
         - "booking_request"
@@ -14469,7 +14468,6 @@ components:
           type: "string"
           description: "The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
           enum:
-            - "travel_base"
             - "campercontact-pms"
             - "camperpay"
             - "booking_request"
@@ -15100,7 +15098,6 @@ components:
         type:
           type: "string"
           enum:
-            - "travel_base"
             - "campercontact-pms"
             - "camperpay"
             - "booking_request"
