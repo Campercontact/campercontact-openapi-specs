@@ -9331,7 +9331,7 @@ paths:
   /v1/moderation/destinations/{id}:
     get:
       summary: "Get one destination"
-      description: "GET /v1/moderation/destinations/{id} <br> One destination of any level. <br> Only for CC_LOCATION_ADMIN (internal staff)."
+      description: "GET /v1/moderation/destinations/{id} <br> One destination of any level, with its parent's names and its page path per language for the edit page's details. <br> Only for CC_LOCATION_ADMIN (internal staff)."
       tags:
         - Destinations
       security:
@@ -9369,8 +9369,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
-      summary: "Update a custom destination"
-      description: "PUT /v1/moderation/destinations/{id} <br> Replaces the names, and the slugs and boundary when given, of a custom destination. A slug that is not sent is kept, so a rename keeps the URL. Official destinations (country, region, city) cannot be changed here. <br> Only for CC_LOCATION_ADMIN (internal staff)."
+      summary: "Update a destination"
+      description: "PUT /v1/moderation/destinations/{id} <br> Writes the whole edit form of a destination of any level. Names are merged per language into the stored ones, so a language left out keeps its name and slug. Slugs and boundary are kept when not sent, so a rename keeps the URL. intro, isShownOnCountryPage and heroMediaId are required and replace the stored values. A new heroMediaId must be a mediaId from request-upload of this destination whose PUT to S3 succeeded: it becomes available and the hero when the save commits, and the replaced hero is deleted; null removes the hero. For a country, region or city the names and slugs belong to the sync: leave them out (or send them unchanged), and always leave boundary out, so that form sends only the content fields. <br> Only for CC_LOCATION_ADMIN (internal staff)."
       tags:
         - Destinations
       security:
@@ -9387,16 +9387,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateCustomDestinationRequest"
+              $ref: "#/components/schemas/UpdateDestinationPageRequest"
       responses:
         "200":
           description: "OK. The destination after the change."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UpdateCustomDestinationResponse"
+                $ref: "#/components/schemas/UpdateDestinationPageResponse"
         "400":
-          description: "Bad Request: validation errors or a name without a slug (JSON), or the id is not a UUID (text)."
+          description: "Bad Request: validation errors, a name without a slug, a slug for a language that has no name after the merge, or the hero upload is missing in storage or no longer pending (JSON); a missing required field or an id that is not a UUID (text)."
           content:
             application/json:
               schema:
@@ -9417,13 +9417,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: "Conflict: the destination is an official one, or a sibling already uses one of the slugs."
+          description: "Conflict: names or slugs of a country, region or city changed, a boundary sent for one, isShownOnCountryPage true for one, or a sibling already uses one of the slugs."
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "422":
-          description: "Unprocessable Entity: the OSM object does not exist or has no area."
+          description: "Unprocessable Entity: the OSM object does not exist or has no area, or heroMediaId is not an upload of this destination."
           content:
             application/json:
               schema:
@@ -9434,7 +9434,61 @@ paths:
             text/plain:
               schema:
                 type: "string"
-  # ==================== JOURNEYS ====================
+  /v1/moderation/destinations/{id}/media/request-upload:
+    post:
+      summary: "Request an upload URL for a destination hero image"
+      description: "POST /v1/moderation/destinations/{id}/media/request-upload <br> A presigned S3 URL, valid for 10 minutes, to PUT a new hero image of a country, region or custom destination to. Cities have a map as hero and cannot get one. The upload becomes the hero when its mediaId is sent as heroMediaId with PUT /v1/moderation/destinations/{id}; until then the current hero stays. An upload that is never saved as the hero, including one whose save failed, stays pending and is removed after a day. <br> Only for CC_LOCATION_ADMIN (internal staff)."
+      tags:
+        - Destinations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestDestinationHeroUploadRequest"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestDestinationHeroUploadResponse"
+        "400":
+          description: "Bad Request: the content type is not an accepted image, or the size is not positive or above the photo limit (JSON), or the id is not a UUID (text)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+            text/plain:
+              schema:
+                type: "string"
+        "403":
+          description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
+          content:
+            text/plain:
+              schema:
+                type: "string"
+        "404":
+          description: "Not Found: no destination with this id."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "Conflict: the destination is a city, whose hero is a map."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/journeys:
     get:
       summary: "Get paginated public journeys"
@@ -10729,21 +10783,38 @@ components:
           description: "The country for a region or custom destination, the region for a city. Null for a country."
           type: ["string", "null"]
           format: "uuid"
+        parentNames:
+          description: "Names per language of the parent row: the region of a city, the country of a region or custom destination; null for a country. Same as parentNames in the search results. Example: {\"nl\": \"Zeeland\"} for Vlissingen."
+          oneOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+            - type: "null"
         countryCode:
           description: "Upper-case ISO 3166-1 alpha-2; the home country of a custom destination."
           type: "string"
         names:
           $ref: "#/components/schemas/MultiLanguageField"
         slugs:
-          $ref: "#/components/schemas/MultiLanguageField"
+          description: "This destination's own URL segment per language, e.g. vlissingen."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        permalinks:
+          description: "The website path of the destination page per language, like a location permalink: the slugs from the country down to this destination joined with a leading slash, e.g. /nederland/zeeland/vlissingen where slugs holds only vlissingen. No host or language prefix. A language an ancestor has no slug for is left out."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
         boundary:
           description: "GeoJSON Polygon or MultiPolygon of a custom destination. Null for official ones."
           type: ["object", "null"]
         heroMediaId:
           type: ["string", "null"]
           format: "uuid"
+        heroPhotoUrl:
+          type: ["string", "null"]
+          description: "Where the hero image is served. Null when there is no hero."
         intro:
           $ref: "#/components/schemas/MultiLanguageField"
+        isShownOnCountryPage:
+          type: "boolean"
+          description: "Whether the country page lists this custom destination. Always false for official destinations."
         created:
           type: "string"
           format: "date-time"
@@ -10756,7 +10827,9 @@ components:
         - "countryCode"
         - "names"
         - "slugs"
+        - "permalinks"
         - "intro"
+        - "isShownOnCountryPage"
         - "created"
         - "modified"
     CreateCustomDestinationResponse:
@@ -10787,8 +10860,14 @@ components:
         heroMediaId:
           type: ["string", "null"]
           format: "uuid"
+        heroPhotoUrl:
+          type: ["string", "null"]
+          description: "Where the hero image is served. Null when there is no hero."
         intro:
           $ref: "#/components/schemas/MultiLanguageField"
+        isShownOnCountryPage:
+          type: "boolean"
+          description: "Whether the country page lists this custom destination. Always false for official destinations."
         created:
           type: "string"
           format: "date-time"
@@ -10802,9 +10881,10 @@ components:
         - "names"
         - "slugs"
         - "intro"
+        - "isShownOnCountryPage"
         - "created"
         - "modified"
-    UpdateCustomDestinationResponse:
+    UpdateDestinationPageResponse:
       type: "object"
       properties:
         id:
@@ -10832,8 +10912,14 @@ components:
         heroMediaId:
           type: ["string", "null"]
           format: "uuid"
+        heroPhotoUrl:
+          type: ["string", "null"]
+          description: "Where the hero image is served. Null when there is no hero."
         intro:
           $ref: "#/components/schemas/MultiLanguageField"
+        isShownOnCountryPage:
+          type: "boolean"
+          description: "Whether the country page lists this custom destination. Always false for official destinations."
         created:
           type: "string"
           format: "date-time"
@@ -10847,6 +10933,7 @@ components:
         - "names"
         - "slugs"
         - "intro"
+        - "isShownOnCountryPage"
         - "created"
         - "modified"
     ListDestinationsResponse:
@@ -10937,25 +11024,70 @@ components:
         - "names"
         - "countryCode"
         - "boundary"
-    UpdateCustomDestinationRequest:
+    RequestDestinationHeroUploadRequest:
+      type: "object"
+      properties:
+        contentType:
+          type: "string"
+          description: "MIME type of the photo; must start with image/."
+          example: "image/jpeg"
+        contentLength:
+          type: "integer"
+          format: "int64"
+          description: "Size of the photo in bytes; the presigned URL only accepts exactly this size."
+          minimum: 1
+      required:
+        - "contentType"
+        - "contentLength"
+    RequestDestinationHeroUploadResponse:
+      type: "object"
+      properties:
+        uploadUrl:
+          type: "string"
+          description: "Presigned S3 URL to PUT the photo to; valid for 10 minutes."
+        mediaId:
+          type: "string"
+          format: "uuid"
+        photoUrl:
+          type: "string"
+          description: "Where the photo is served once it is saved as the hero."
+      required:
+        - "uploadUrl"
+        - "mediaId"
+        - "photoUrl"
+    UpdateDestinationPageRequest:
       type: "object"
       properties:
         names:
-          description: "Name per language; keys must be nl, de, fr, es, en or it."
-          allOf:
+          description: "Optional. Name per language; keys must be nl, de, fr, es, en or it. Merged into the stored names: a language left out keeps its stored name and slug, and left out entirely keeps all names. For a country, region or city leave it out, or send the stored names unchanged (409 otherwise)."
+          oneOf:
             - $ref: "#/components/schemas/MultiLanguageField"
+            - type: "null"
         slugs:
-          description: "URL segment per language: lower-case letters and digits joined by single hyphens. Per language with a name: the sent slug, else (on update) the stored one, else one made from the name. Only languages that have a name; a language dropped from names loses its slug."
+          description: "URL segment per language: lower-case letters and digits joined by single hyphens. Per language with a name after the merge: the sent slug, else the stored one, else one made from the name. A slug for a language that has no name after the merge answers 400."
           oneOf:
             - $ref: "#/components/schemas/MultiLanguageField"
             - type: "null"
         boundary:
-          description: "Replaces the stored area when given."
+          description: "Replaces the stored area when given. Custom destinations only: for a country, region or city leave it out, even unchanged (409)."
           oneOf:
             - $ref: "#/components/schemas/BoundaryInput"
             - type: "null"
+        intro:
+          description: "Replaces the stored intro as a whole; an empty object removes it. At most 300 characters per language, none blank."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        isShownOnCountryPage:
+          type: "boolean"
+          description: "true only for custom destinations."
+        heroMediaId:
+          type: ["string", "null"]
+          format: "uuid"
+          description: "The hero: the current one to keep it, a mediaId from request-upload to replace it, or null to remove it. The key is required."
       required:
-        - "names"
+        - "intro"
+        - "isShownOnCountryPage"
+        - "heroMediaId"
     SearchDestinationsResponse:
       type: "object"
       properties:
@@ -12428,6 +12560,7 @@ components:
       type: "string"
       description: "Supported booking systems. The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
       enum:
+        - "travel_base"
         - "campercontact-pms"
         - "camperpay"
         - "booking_request"
@@ -14468,6 +14601,7 @@ components:
           type: "string"
           description: "The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
           enum:
+            - "travel_base"
             - "campercontact-pms"
             - "camperpay"
             - "booking_request"
@@ -15098,6 +15232,7 @@ components:
         type:
           type: "string"
           enum:
+            - "travel_base"
             - "campercontact-pms"
             - "camperpay"
             - "booking_request"
