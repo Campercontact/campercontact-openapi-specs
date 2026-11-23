@@ -9144,6 +9144,48 @@ paths:
               schema:
                 type: "string"
   # ==================== DESTINATIONS ====================
+  /v1/destinations:
+    get:
+      summary: "Look up a destination by the slugs of its website path"
+      description: "GET /v1/destinations?lang=&permalink= <br> The destination behind a website path, for every destination page. The backend splits permalink into its segments and resolves them one by one: the country by slug, then the region or custom destination under that country, then the city under that region. Each segment is matched in lang first, then in any of the six languages under the same parent, so a link in another language still resolves; nothing in any language is a 404. Never redirects: the website compares the requested path with permalinks[lang] and redirects itself. <br> Children: a country's regions and custom destinations (every one, with isShownOnCountryPage; the country page leaves out the switched-off ones), a region's cities, none for a city or a custom destination; ordered by name in lang. No counts or ratings: the website asks the search destinations lambda with countryCode or osmId from this answer. <br> Public, no login. Cached with the default GET headers (10 seconds, 404 one minute)."
+      tags:
+        - Destinations
+      parameters:
+        - name: "lang"
+          in: "query"
+          required: true
+          description: "The locale the visitor is on: nl, de, fr, es, en or it."
+          schema:
+            type: "string"
+            enum: ["nl", "de", "fr", "es", "en", "it"]
+        - name: "permalink"
+          in: "query"
+          required: true
+          description: "The website path of the destination, the same shape as permalinks in the answer: slugs from the country down, one to three segments, a leading slash, no host and no language prefix. The frontend sends the path as is after removing its own language prefix (and the /d/ test prefix). A trailing slash, surrounding spaces and capitals are accepted; URL-encoded slashes (%2F) decode."
+          schema:
+            type: "string"
+          example: "/nederland/zeeland/vlissingen"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LookupDestinationResponse"
+        "400":
+          description: "Bad Request: lang missing or unsupported; permalink missing or blank, with an empty segment (//), more than three segments, or a segment longer than 200 characters."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: "Not Found: a segment matches no destination under the one before it, in any language."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/moderation/destinations:
     get:
       summary: "List destinations"
@@ -9186,11 +9228,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ListDestinationsPageResponse"
         "400":
-          description: "Bad Request: a filter is not a country code or a level, or offset or limit is out of range."
+          description: "Bad Request: a filter is not a country code or a level, or offset or limit is out of range (validation errors, a bare ErrorMessage array)."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ErrorMessage"
         "403":
           description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
           content:
@@ -9224,11 +9268,13 @@ paths:
                 items:
                   $ref: "#/components/schemas/SearchDestinationsResponse"
         "400":
-          description: "Bad Request: query is missing, not 2 to 100 characters after trimming, or contains U+0000 (NUL)."
+          description: "Bad Request: query is missing, not 2 to 100 characters after trimming, or contains U+0000 (NUL) (validation errors, a bare ErrorMessage array)."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ErrorMessage"
         "403":
           description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
           content:
@@ -9260,11 +9306,13 @@ paths:
                 items:
                   $ref: "#/components/schemas/SearchBoundaryCandidatesResponse"
         "400":
-          description: "Bad Request: q is missing or shorter than 2 characters."
+          description: "Bad Request: q is missing or shorter than 2 characters (validation errors, a bare ErrorMessage array)."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ErrorMessage"
         "403":
           description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
           content:
@@ -9299,11 +9347,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/CreateCustomDestinationResponse"
         "400":
-          description: "Bad Request: validation errors, or a name that yields no slug."
+          description: "Bad Request: validation errors (a bare ErrorMessage array); a name that yields no slug, or a body that is not valid JSON or misses a required field (ErrorResponse)."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorResponse"
+                  - type: "array"
+                    items:
+                      $ref: "#/components/schemas/ErrorMessage"
         "403":
           description: "Forbidden: not logged in, or not a CC_LOCATION_ADMIN."
           content:
@@ -9396,11 +9448,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/UpdateDestinationPageResponse"
         "400":
-          description: "Bad Request: validation errors, a name without a slug, a slug for a language that has no name after the merge, or the hero upload is missing in storage or no longer pending (JSON); a missing required field or an id that is not a UUID (text)."
+          description: "Bad Request: validation errors (a bare ErrorMessage array); a name without a slug, a slug for a language that has no name after the merge, the hero upload missing in storage or no longer pending, or a body that is not valid JSON or misses a required field (ErrorResponse); an id that is not a UUID (text)."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorResponse"
+                  - type: "array"
+                    items:
+                      $ref: "#/components/schemas/ErrorMessage"
             text/plain:
               schema:
                 type: "string"
@@ -9463,11 +9519,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/NewUploadReponse"
         "400":
-          description: "Bad Request: the content type is not an accepted image, the size is not positive or above the photo limit, mediaDisplayType is not destination_hero, or a source is sent (JSON); or the id is not a UUID (text)."
+          description: "Bad Request: the content type is not an accepted image, the size is not positive, mediaDisplayType is not destination_hero, or a source is sent (validation errors, a bare ErrorMessage array); the size above the photo limit, or a body that is not valid JSON or misses a required field (ErrorResponse); an id that is not a UUID (text)."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorResponse"
+                  - type: "array"
+                    items:
+                      $ref: "#/components/schemas/ErrorMessage"
             text/plain:
               schema:
                 type: "string"
@@ -10768,6 +10828,107 @@ components:
         - "region"
         - "city"
         - "custom"
+    LookupDestinationResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          description: "OSM id of an official region or city (R47654), the key for the search destinations lambda. Null for countries and custom destinations."
+          type: ["string", "null"]
+        countryCode:
+          description: "Upper-case ISO 3166-1 alpha-2; the key for the search destinations lambda on a country page."
+          type: "string"
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          description: "This destination's own URL segment per language."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        permalinks:
+          description: "Canonical website path per language, e.g. /nederland/zeeland/vlissingen; no host or language prefix. The website redirects when the requested path differs from permalinks[lang]. A language an ancestor has no slug for is left out."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        heroPhotoUrl:
+          type: ["string", "null"]
+          description: "Where the hero image is served. Null when there is no hero."
+        intro:
+          $ref: "#/components/schemas/MultiLanguageField"
+        parents:
+          description: "From the country down to the direct parent, for \"Part of\" and breadcrumbs; empty for a country."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/LookupDestinationParentResponse"
+        children:
+          description: "A country's regions and custom destinations, a region's cities; empty for a city or a custom destination. Ordered by name in lang."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/LookupDestinationChildResponse"
+      required:
+        - "id"
+        - "level"
+        - "countryCode"
+        - "names"
+        - "slugs"
+        - "permalinks"
+        - "intro"
+        - "parents"
+        - "children"
+    LookupDestinationParentResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          type: ["string", "null"]
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          $ref: "#/components/schemas/MultiLanguageField"
+        permalinks:
+          description: "Canonical website path of the parent per language."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+      required:
+        - "id"
+        - "level"
+        - "names"
+        - "slugs"
+        - "permalinks"
+    LookupDestinationChildResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        level:
+          $ref: "#/components/schemas/DestinationLevel"
+        osmId:
+          description: "OSM type letter plus id of an official region or city (R47654), the key the search destinations lambda returns counts under. Null for custom destinations."
+          type: ["string", "null"]
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+        slugs:
+          description: "This destination's own URL segment per language, e.g. vlissingen."
+          allOf:
+            - $ref: "#/components/schemas/MultiLanguageField"
+        heroPhotoUrl:
+          type: ["string", "null"]
+          description: "Where the hero image is served. Null when there is no hero."
+        isShownOnCountryPage:
+          type: ["boolean", "null"]
+          description: "Whether the country page lists this custom destination. Null for official regions and cities."
+      required:
+        - "id"
+        - "level"
+        - "names"
+        - "slugs"
     RetrieveDestinationResponse:
       type: "object"
       properties:
