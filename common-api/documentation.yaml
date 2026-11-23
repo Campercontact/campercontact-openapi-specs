@@ -9437,7 +9437,7 @@ paths:
   /v1/moderation/destinations/{id}/media/request-upload:
     post:
       summary: "Request an upload URL for a destination hero image"
-      description: "POST /v1/moderation/destinations/{id}/media/request-upload <br> A presigned S3 URL, valid for 10 minutes, to PUT a new hero image of a country, region or custom destination to. Cities have a map as hero and cannot get one. The upload becomes the hero when its mediaId is sent as heroMediaId with PUT /v1/moderation/destinations/{id}; until then the current hero stays. An upload that is never saved as the hero, including one whose save failed, stays pending and is removed after a day. <br> Only for CC_LOCATION_ADMIN (internal staff)."
+      description: "POST /v1/moderation/destinations/{id}/media/request-upload <br> Takes the shared NewUploadRequest with mediaDisplayType destination_hero and answers the shared NewUploadReponse: a presigned S3 URL, valid for 10 minutes, to PUT a new hero image of a country, region or custom destination to. Cities have a map as hero and cannot get one. The upload becomes the hero when its mediaId is sent as heroMediaId with PUT /v1/moderation/destinations/{id}; until then the current hero stays. An upload that is never saved as the hero, including one whose save failed, stays pending and is removed after a day. <br> Only for CC_LOCATION_ADMIN (internal staff)."
       tags:
         - Destinations
       security:
@@ -9454,16 +9454,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RequestDestinationHeroUploadRequest"
+              $ref: "#/components/schemas/NewUploadRequest"
       responses:
         "200":
           description: "OK"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RequestDestinationHeroUploadResponse"
+                $ref: "#/components/schemas/NewUploadReponse"
         "400":
-          description: "Bad Request: the content type is not an accepted image, or the size is not positive or above the photo limit (JSON), or the id is not a UUID (text)."
+          description: "Bad Request: the content type is not an accepted image, the size is not positive or above the photo limit, mediaDisplayType is not destination_hero, or a source is sent (JSON); or the id is not a UUID (text)."
           content:
             application/json:
               schema:
@@ -11024,37 +11024,6 @@ components:
         - "names"
         - "countryCode"
         - "boundary"
-    RequestDestinationHeroUploadRequest:
-      type: "object"
-      properties:
-        contentType:
-          type: "string"
-          description: "MIME type of the photo; must start with image/."
-          example: "image/jpeg"
-        contentLength:
-          type: "integer"
-          format: "int64"
-          description: "Size of the photo in bytes; the presigned URL only accepts exactly this size."
-          minimum: 1
-      required:
-        - "contentType"
-        - "contentLength"
-    RequestDestinationHeroUploadResponse:
-      type: "object"
-      properties:
-        uploadUrl:
-          type: "string"
-          description: "Presigned S3 URL to PUT the photo to; valid for 10 minutes."
-        mediaId:
-          type: "string"
-          format: "uuid"
-        photoUrl:
-          type: "string"
-          description: "Where the photo is served once it is saved as the hero."
-      required:
-        - "uploadUrl"
-        - "mediaId"
-        - "photoUrl"
     UpdateDestinationPageRequest:
       type: "object"
       properties:
@@ -12560,7 +12529,6 @@ components:
       type: "string"
       description: "Supported booking systems. The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
       enum:
-        - "travel_base"
         - "campercontact-pms"
         - "camperpay"
         - "booking_request"
@@ -14601,7 +14569,6 @@ components:
           type: "string"
           description: "The Campercontact PMS is returned as `campercontact-pms`; requests also accept the legacy `travel_base`."
           enum:
-            - "travel_base"
             - "campercontact-pms"
             - "camperpay"
             - "booking_request"
@@ -15232,7 +15199,6 @@ components:
         type:
           type: "string"
           enum:
-            - "travel_base"
             - "campercontact-pms"
             - "camperpay"
             - "booking_request"
