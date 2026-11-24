@@ -9383,7 +9383,7 @@ paths:
   /v1/moderation/destinations/{id}:
     get:
       summary: "Get one destination"
-      description: "GET /v1/moderation/destinations/{id} <br> One destination of any level, with its parent's names and its page path per language for the edit page's details. <br> Only for CC_LOCATION_ADMIN (internal staff)."
+      description: "GET /v1/moderation/destinations/{id} <br> One destination of any level, with its parents from the country down (id and names of each) and its page path per language for the edit page's details and breadcrumb. <br> Only for CC_LOCATION_ADMIN (internal staff)."
       tags:
         - Destinations
       security:
@@ -10901,6 +10901,17 @@ components:
         - "names"
         - "slugs"
         - "permalinks"
+    RetrieveDestinationParentResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        names:
+          $ref: "#/components/schemas/MultiLanguageField"
+      required:
+        - "id"
+        - "names"
     LookupDestinationChildResponse:
       type: "object"
       properties:
@@ -10945,10 +10956,16 @@ components:
           type: ["string", "null"]
           format: "uuid"
         parentNames:
-          description: "Names per language of the parent row: the region of a city, the country of a region or custom destination; null for a country. Same as parentNames in the search results. Example: {\"nl\": \"Zeeland\"} for Vlissingen."
+          description: "Deprecated: use the last entry of parents. Names per language of the parent row: the region of a city, the country of a region or custom destination; null for a country. Same as parentNames in the search results. Example: {\"nl\": \"Zeeland\"} for Vlissingen."
+          deprecated: true
           oneOf:
             - $ref: "#/components/schemas/MultiLanguageField"
             - type: "null"
+        parents:
+          description: "The rows above this one, from the country down to the direct parent: country and region for a city, the country for a region or custom destination, empty for a country. Each has its id and names only. A city-state such as Berlin is stored once as a region, so it has only its country."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RetrieveDestinationParentResponse"
         countryCode:
           description: "Upper-case ISO 3166-1 alpha-2; the home country of a custom destination."
           type: "string"
@@ -10989,6 +11006,7 @@ components:
         - "names"
         - "slugs"
         - "permalinks"
+        - "parents"
         - "intro"
         - "isShownOnCountryPage"
         - "created"
