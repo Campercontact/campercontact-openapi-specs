@@ -1,0 +1,471 @@
+openapi: 3.0.3
+info:
+  title: Search Destinations API
+  description: >
+    Figures and location cards of the destination pages (country, region, city), from the locations index
+    in Elasticsearch. A destination is identified by the OSM id common-api stores on every location
+    (`countryCode`, `regionId`, `cityId`); names and slugs come from common-api's destinations lookup.
+    Every answer is cached by CloudFront for a day.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local server
+  - url: https://services.acc.campercontact.com/
+    description: Acceptation server
+  - url: https://services.campercontact.com/
+    description: Production server
+paths:
+  /destinations/page:
+    get:
+      summary: Everything a destination page needs from the search index
+      description: >
+        The data of one destination page in one call, from one `_msearch` round trip. Exactly one of
+        `countryCode`, `regionId` and `cityId` picks the destination, and the answer has the shape of that level,
+        told apart by `level`. Only `countryCode` is available yet: region and city pages follow, and until then
+        `regionId` and `cityId` answer 400. The web gets names, slugs, hero images and intros from common-api's
+        destinations lookup and joins them to this answer by OSM id. Only visible locations count (ACTIVE, NEW,
+        IMPORTED, not hidden). A destination without locations answers zero, nulls and empty lists.
+      parameters:
+        - $ref: "#/components/parameters/acceptLanguage"
+        - $ref: "#/components/parameters/xFeatureFlags"
+        - $ref: "#/components/parameters/destinationCountryCode"
+        - $ref: "#/components/parameters/destinationRegionId"
+        - $ref: "#/components/parameters/destinationCityId"
+        - $ref: "#/components/parameters/seed"
+      responses:
+        "200":
+          description: The page data of the requested level
+          headers:
+            Cache-Control:
+              description: >
+                A day (`max-age=86400`); five minutes (`max-age=300`) when an optional section was left out.
+              schema:
+                type: string
+                example: public, max-age=86400
+            Vary:
+              description: The request headers the body depends on.
+              schema:
+                type: string
+                example: Accept-Language, X-Feature-Flags
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationPage"
+        "400":
+          description: >
+            No key, more than one key, a malformed key or seed, or a level whose page is not available yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "504":
+          description: >
+            Elasticsearch did not answer within the timeout, for the whole call or for the hero figures;
+            no page is returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  parameters:
+    acceptLanguage:
+      name: accept-language
+      in: header
+      description: >
+        The language of the locations index to read (`en`, `fr`, `nl`, `de`, `it`, `es`); the first language
+        of the header counts, without its region. Defaults to `en`.
+      required: false
+      schema:
+        type: string
+        default: en
+      example: nl
+    xFeatureFlags:
+      name: x-feature-flags
+      in: header
+      description: >
+        The feature flags to enable, comma-separated, the same header the search proxy takes. `pms` returns
+        `filters.bookingSystem: campercontact-pms` instead of `travel_base`. Other flags are ignored.
+      required: false
+      style: simple
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum: [microcamping, parking, pms]
+    seed:
+      name: seed
+      in: query
+      description: >
+        Seed for the random order of the Ultimate cards (`featured` on a country page), 1 to 64 characters. The same seed on the same
+        index gives the same pick, so the web seeds with the date and the destination id to keep a page
+        stable for a day.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        example: 2026-11-16:R47654
+    destinationCountryCode:
+      name: countryCode
+      in: query
+      description: >
+        ISO 3166-1 alpha-2 code of a country page (plus `XK` for Kosovo); case-insensitive. Exactly one of
+        countryCode, regionId and cityId is required.
+      schema:
+        type: string
+        pattern: "^[A-Za-z]{2}$"
+        example: NL
+    destinationRegionId:
+      name: regionId
+      in: query
+      description: OSM id of a region page, type letter plus id. Not available yet; answers 400.
+      schema:
+        type: string
+        pattern: '^[NWR]\d+$'
+        example: R47654
+    destinationCityId:
+      name: cityId
+      in: query
+      description: OSM id of a city page, type letter plus id. Not available yet; answers 400.
+      schema:
+        type: string
+        pattern: '^[NWR]\d+$'
+        example: R271110
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: What went wrong; for a 400 the validation messages, one per line.
+
+    LatLng:
+      type: object
+      required:
+        - lat
+        - lon
+      properties:
+        lat:
+          type: number
+          description: Latitude coordinate
+          example: 52.370216
+        lon:
+          type: number
+          description: Longitude coordinate
+          example: 4.895168
+
+    DestinationPage:
+      description: >
+        One page per level, told apart by `level`. Only the country page exists yet; the region and city pages
+        are added to `oneOf` and `mapping` when they ship, so a client switches on `level`.
+      oneOf:
+        - $ref: "#/components/schemas/CountryPage"
+      discriminator:
+        propertyName: level
+        mapping:
+          country: "#/components/schemas/CountryPage"
+
+    CountryPage:
+      type: object
+      required:
+        - level
+        - countryCode
+        - stats
+        - centre
+        - boundingBox
+        - regions
+        - popularCities
+        - sections
+      properties:
+        level:
+          type: string
+          enum: [country]
+          description: The level of the page; always `country` here.
+        countryCode:
+          type: string
+          description: The country code of the request, upper case.
+          example: NL
+        stats:
+          type: object
+          description: The figures in the hero of the country page.
+          required:
+            - locations
+            - reviews
+            - averageRating
+            - bookable
+          properties:
+            locations:
+              type: integer
+              description: Number of visible locations in the country.
+              example: 1700
+            reviews:
+              type: integer
+              nullable: true
+              description: Sum of the review counts of those locations; null when there are no locations.
+              example: 41200
+            averageRating:
+              type: number
+              nullable: true
+              description: >
+                Average rating of the locations with a rating above 0, rounded to one decimal; null when no
+                location is rated.
+              example: 4.2
+            bookable:
+              type: integer
+              description: Number of instantly bookable locations (`filters.isBookable`, the flag of the "Book now" badge and `/find?isBookable=true`).
+              example: 310
+        centre:
+          type: object
+          nullable: true
+          description: Centroid of the country's locations; null without locations.
+          required:
+            - lat
+            - lon
+          properties:
+            lat:
+              type: number
+              example: 52.1
+            lon:
+              type: number
+              example: 5.3
+        boundingBox:
+          type: object
+          nullable: true
+          description: Bounding box of the country's locations; null without locations.
+          required:
+            - north
+            - west
+            - south
+            - east
+          properties:
+            north:
+              type: number
+              example: 53.5
+            west:
+              type: number
+              example: 3.3
+            south:
+              type: number
+              example: 50.7
+            east:
+              type: number
+              example: 7.2
+        regions:
+          type: array
+          description: >
+            "Choose your region": the regions of the country with their counts, most locations first (at most
+            200). Locations without a region id are not in any of them, so the counts can add up to less than
+            `stats.locations`. Areas (custom destinations) are not included yet.
+          items:
+            $ref: "#/components/schemas/DestinationChild"
+        popularCities:
+          type: array
+          description: >
+            Provisional: what "Popular searches" shows is still an open question (Q11, CC-3574), so this may
+            change or go. For now, the six cities with the most locations, by OSM id.
+          items:
+            type: object
+            required:
+              - id
+              - locations
+            properties:
+              id:
+                type: string
+                description: OSM id of the city.
+                example: R271110
+              locations:
+                type: integer
+                example: 180
+        sections:
+          type: object
+          description: >
+            The card lists of the page. A section whose search failed or timed out is left out, and the
+            answer is then cached for five minutes; a failure of the hero figures answers 500 or 504.
+          properties:
+            featured:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                Four Ultimate customers of the country in a random order, the same order for the same `seed`;
+                `total` is the number of Ultimate customers.
+            bookable:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                Four instantly bookable locations (`filters.isBookable`) rated 4 or higher, by rating and then
+                number of reviews.
+
+    DestinationChild:
+      type: object
+      required:
+        - id
+        - locations
+        - centre
+      properties:
+        id:
+          type: string
+          description: OSM id of the region or city.
+          example: R47654
+        locations:
+          type: integer
+          description: Number of visible locations in it.
+          example: 150
+        centre:
+          type: object
+          nullable: true
+          description: Centroid of its locations, for a map pin; null when none of them has coordinates.
+          required:
+            - lat
+            - lon
+          properties:
+            lat:
+              type: number
+              example: 52.4
+            lon:
+              type: number
+              example: 4.8
+
+    DestinationSection:
+      type: object
+      required:
+        - total
+        - items
+      properties:
+        total:
+          type: integer
+          description: Number of locations that match the section, beyond the cards returned.
+          example: 12
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationLocationCard"
+
+    PriceRange:
+      type: object
+      description: The price bucket of the location's current indexed price, as the /find cards show it.
+      required:
+        - min
+        - max
+      properties:
+        min:
+          type: number
+          nullable: true
+          example: 15
+        max:
+          type: number
+          nullable: true
+          description: Null for the open-ended top bucket, and both null when the price is unknown.
+          example: 25
+
+    DestinationLocationCard:
+      type: object
+      description: >
+        A location card with the fields /find returns, plus `priceRange` from the indexed prices (no live PMS
+        `price`: these answers are cached for a day).
+      required:
+        - id
+        - type
+        - sitecode
+        - title
+        - permalink
+        - filters
+        - priceRange
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: poi
+        title:
+          type: string
+        subtitle:
+          type: string
+        location:
+          $ref: "#/components/schemas/LatLng"
+        sitecode:
+          type: integer
+        permalink:
+          type: string
+        translatedPermalinks:
+          type: array
+          items:
+            type: object
+            properties:
+              locale:
+                type: string
+              permalink:
+                type: string
+        thumbnail:
+          type: string
+        subscriptionLevel:
+          type: integer
+          description: >
+            Subscription level of the location: 10 Free, 20 Basic, 25 Boost, 30 Silver, 35 Premium,
+            40 Ultimate. Cards show the promoted label from 20 upwards.
+          example: 40
+        maxStayHours:
+          type: integer
+          nullable: true
+          example: 72
+          description: >
+            Maximum stay in hours: 0 is daytime parking only, 9999 is an unlimited stay, null is unknown.
+            Absent on documents not reindexed since this field was added; treat absent as null.
+        filters:
+          type: object
+          properties:
+            poiType:
+              type: string
+            rating:
+              type: number
+            numberOfReviews:
+              type: integer
+            maxCamperSpots:
+              type: integer
+            isBookable:
+              type: boolean
+            isClaimed:
+              type: boolean
+            status:
+              type: string
+              enum: [ACTIVE, NEW, IMPORTED]
+            bookingSystem:
+              type: string
+              enum:
+                [
+                  travel_base,
+                  campercontact-pms,
+                  camperpay,
+                  booking_request,
+                  campspace,
+                  none,
+                ]
+              description: >
+                Booking system of the location. `campercontact-pms` (Campercontact PMS) is returned instead of
+                `travel_base` when the `pms` feature flag is sent; `travel_base` will be removed later.
+            prices:
+              type: array
+              items:
+                type: object
+                properties:
+                  dateFrom:
+                    type: string
+                    format: date
+                  dateTo:
+                    type: string
+                    format: date
+                  price:
+                    type: number
+                  discount:
+                    type: boolean
+        priceRange:
+          $ref: "#/components/schemas/PriceRange"
