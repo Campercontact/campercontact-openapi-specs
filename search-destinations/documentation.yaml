@@ -422,6 +422,8 @@ components:
             Absent on documents not reindexed since this field was added; treat absent as null.
         filters:
           type: object
+          required:
+            - prices
           properties:
             poiType:
               type: string
@@ -454,6 +456,7 @@ components:
                 `travel_base` when the `pms` feature flag is sent; `travel_base` will be removed later.
             prices:
               type: array
+              description: Price periods of the location; empty when it has none.
               items:
                 type: object
                 properties:
