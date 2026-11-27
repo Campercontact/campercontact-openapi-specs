@@ -19,10 +19,10 @@ paths:
     get:
       summary: Everything a destination page needs from the search index
       description: >
-        The data of one destination page in one call, from one `_msearch` round trip. Exactly one of
-        `countryCode`, `regionId` and `cityId` picks the destination, and the answer has the shape of that level,
-        told apart by `level`. Only `countryCode` is available yet: region and city pages follow, and until then
-        `regionId` and `cityId` answer 400. The web gets names, slugs, hero images and intros from common-api's
+        The data of one destination page in one call. Exactly one of `countryCode`, `regionId` and `cityId`
+        picks the destination, and the answer has the shape of that level, told apart by `level`. Country and
+        region pages come from one `_msearch` round trip; a city page needs a second, short search for "Just
+        outside", around the centre of its locations. The web gets names, slugs, hero images and intros from common-api's
         destinations lookup and joins them to this answer by OSM id. Only visible locations count (ACTIVE, NEW,
         IMPORTED, not hidden). A destination without locations answers zero, nulls and empty lists.
       parameters:
@@ -53,7 +53,7 @@ paths:
                 $ref: "#/components/schemas/DestinationPage"
         "400":
           description: >
-            No key, more than one key, a malformed key or seed, or a level whose page is not available yet
+            No key, more than one key, or a malformed key or seed
           content:
             application/json:
               schema:
@@ -104,7 +104,8 @@ components:
       name: seed
       in: query
       description: >
-        Seed for the random order of the Ultimate cards (`featured` on a country page), 1 to 64 characters. The same seed on the same
+        Seed for the random order of the Ultimate cards (`featured` on a country page, `top` on a region page;
+        a city page has none and ignores it), 1 to 64 characters. The same seed on the same
         index gives the same pick, so the web seeds with the date and the destination id to keep a page
         stable for a day.
       schema:
@@ -117,7 +118,9 @@ components:
       in: query
       description: >
         ISO 3166-1 alpha-2 code of a country page (plus `XK` for Kosovo); case-insensitive. Exactly one of
-        countryCode, regionId and cityId is required.
+        countryCode, regionId and cityId is required. No key is checked against the destinations: an unknown
+        one answers 200 with zero figures, like a destination without locations, so ask only for keys that
+        common-api's destinations lookup returned (it answers 404 for an unknown place).
       schema:
         type: string
         pattern: "^[A-Za-z]{2}$"
@@ -125,7 +128,9 @@ components:
     destinationRegionId:
       name: regionId
       in: query
-      description: OSM id of a region page, type letter plus id. Not available yet; answers 400.
+      description: >
+        OSM id of a region page, type letter plus id. An unknown id answers 200 with zero figures; see
+        countryCode.
       schema:
         type: string
         pattern: '^[NWR]\d+$'
@@ -133,7 +138,10 @@ components:
     destinationCityId:
       name: cityId
       in: query
-      description: OSM id of a city page, type letter plus id. Not available yet; answers 400.
+      description: >
+        OSM id of a city page, type letter plus id. A city-state (Berlin, Hamburg) has the same id as its
+        region, so both levels count the same locations. An unknown id answers 200 with zero figures; see
+        countryCode.
       schema:
         type: string
         pattern: '^[NWR]\d+$'
@@ -166,14 +174,17 @@ components:
 
     DestinationPage:
       description: >
-        One page per level, told apart by `level`. Only the country page exists yet; the region and city pages
-        are added to `oneOf` and `mapping` when they ship, so a client switches on `level`.
+        One page per level, told apart by `level`, so a client switches on it.
       oneOf:
         - $ref: "#/components/schemas/CountryPage"
+        - $ref: "#/components/schemas/RegionPage"
+        - $ref: "#/components/schemas/CityPage"
       discriminator:
         propertyName: level
         mapping:
           country: "#/components/schemas/CountryPage"
+          region: "#/components/schemas/RegionPage"
+          city: "#/components/schemas/CityPage"
 
     CountryPage:
       type: object
@@ -304,6 +315,262 @@ components:
               description: >
                 Four instantly bookable locations (`filters.isBookable`) rated 4 or higher, by rating and then
                 number of reviews.
+
+    RegionPage:
+      type: object
+      required:
+        - level
+        - regionId
+        - stats
+        - centre
+        - boundingBox
+        - cities
+        - citiesTotal
+        - sections
+      properties:
+        level:
+          type: string
+          enum: [region]
+          description: The level of the page; always `region` here.
+        regionId:
+          type: string
+          description: The region id of the request.
+          example: R47654
+        stats:
+          type: object
+          description: The figures in the hero of the region page.
+          required:
+            - locations
+            - reviews
+            - averageRating
+            - bookable
+            - medianPrice
+          properties:
+            locations:
+              type: integer
+              description: Number of visible locations in the region.
+              example: 214
+            reviews:
+              type: integer
+              nullable: true
+              description: Sum of the review counts of those locations; null when there are no locations.
+              example: 6830
+            averageRating:
+              type: number
+              nullable: true
+              description: >
+                Average rating of the locations with a rating above 0, rounded to one decimal; null when no
+                location is rated.
+              example: 4.4
+            bookable:
+              type: integer
+              description: Number of instantly bookable locations (`filters.isBookable`, the flag of the "Book now" badge and `/find?isBookable=true`).
+              example: 31
+            medianPrice:
+              type: number
+              nullable: true
+              description: >
+                "Avg. per night": median of today's price in EUR over the locations with a price above 0, rounded
+                to cents; null when fewer than three locations have a price today. A location whose price periods
+                overlap today counts once per period.
+              example: 19
+        centre:
+          type: object
+          nullable: true
+          description: Centroid of the region's locations, for the static map; null without locations.
+          required:
+            - lat
+            - lon
+          properties:
+            lat:
+              type: number
+              example: 48.0
+            lon:
+              type: number
+              example: 8.1
+        boundingBox:
+          type: object
+          nullable: true
+          description: Bounding box of the region's locations, for the static map; null without locations.
+          required:
+            - north
+            - west
+            - south
+            - east
+          properties:
+            north:
+              type: number
+              example: 48.9
+            west:
+              type: number
+              example: 7.6
+            south:
+              type: number
+              example: 47.6
+            east:
+              type: number
+              example: 8.9
+        cities:
+          type: array
+          description: >
+            "Cities in …": the cities of the region with their count and centre (for the map pins), most
+            locations first, at most 500; `citiesTotal` says how many there are. A city is the municipality a
+            location is geocoded to, so a large region can have more. Locations without a city id are not in
+            any of them, so the counts can add up to less than `stats.locations`. Names and slugs come from
+            common-api's lookup by OSM id.
+          items:
+            $ref: "#/components/schemas/DestinationChild"
+        citiesTotal:
+          type: integer
+          description: >
+            The number of cities with locations in the region; larger than the length of `cities` when that
+            list was cut at 500.
+          example: 38
+        sections:
+          type: object
+          description: >
+            The card lists of the page. `all` is required: when its search fails or times out the page answers
+            500 or 504, as for the hero figures. Another section whose search failed or timed out is left out,
+            and the answer is then cached for five minutes.
+          required:
+            - all
+          properties:
+            top:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                "Top spots": three Ultimate customers of the region in a random order, the same order for the same
+                `seed`; `total` is the number of Ultimate customers. No pinned review yet (phase 2).
+            all:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                "All N camper locations": the first six in the relevance order of `/find`; `total` is N, for
+                "Show all N" to `/find`.
+            bookable:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                Four instantly bookable locations (`filters.isBookable`) rated 4 or higher, by rating and then
+                number of reviews.
+
+    CityPage:
+      type: object
+      required:
+        - level
+        - cityId
+        - stats
+        - centre
+        - boundingBox
+        - sections
+      properties:
+        level:
+          type: string
+          enum: [city]
+          description: The level of the page; always `city` here.
+        cityId:
+          type: string
+          description: The city id of the request.
+          example: R271110
+        stats:
+          type: object
+          description: >
+            The figures in the hero of the city page ("18 sites, 7 instantly bookable") and its description.
+          required:
+            - locations
+            - reviews
+            - averageRating
+            - bookable
+            - medianPrice
+          properties:
+            locations:
+              type: integer
+              description: Number of visible locations in the city.
+              example: 18
+            reviews:
+              type: integer
+              nullable: true
+              description: Sum of the review counts of those locations; null when there are no locations.
+              example: 1140
+            averageRating:
+              type: number
+              nullable: true
+              description: >
+                Average rating of the locations with a rating above 0, rounded to one decimal; null when no
+                location is rated.
+              example: 4.2
+            bookable:
+              type: integer
+              description: Number of instantly bookable locations (`filters.isBookable`, the flag of the "Book now" badge and `/find?isBookable=true`).
+              example: 7
+            medianPrice:
+              type: number
+              nullable: true
+              description: >
+                "Avg. per night": median of today's price in EUR over the locations with a price above 0, rounded
+                to cents; null when fewer than three locations have a price today. A location whose price periods
+                overlap today counts once per period.
+              example: 21
+        centre:
+          type: object
+          nullable: true
+          description: >
+            Centroid of the city's locations, for the hero map and the centre of "Just outside"; null without
+            locations. Not the city centre: the destinations lookup has none yet.
+          required:
+            - lat
+            - lon
+          properties:
+            lat:
+              type: number
+              example: 47.99
+            lon:
+              type: number
+              example: 7.85
+        boundingBox:
+          type: object
+          nullable: true
+          description: Bounding box of the city's locations, for the hero map; null without locations.
+          required:
+            - north
+            - west
+            - south
+            - east
+          properties:
+            north:
+              type: number
+              example: 48.03
+            west:
+              type: number
+              example: 7.78
+            south:
+              type: number
+              example: 47.96
+            east:
+              type: number
+              example: 7.92
+        sections:
+          type: object
+          description: >
+            The card lists of the page. `all` is required: when its search fails or times out the page answers
+            500 or 504, as for the hero figures. `outside` is left out when its search failed or timed out, and
+            the answer is then cached for five minutes.
+          required:
+            - all
+          properties:
+            all:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                "N camper locations in …": the first six in the relevance order of `/find`; `total` is N, for
+                "View all N" to `/find`. The cards carry `location` for the pins on the hero map.
+            outside:
+              allOf:
+                - $ref: "#/components/schemas/DestinationSection"
+              description: >
+                "Just outside …": four locations within 25 km of `centre` that are not in the city, closest
+                first, each with `metaData.distance`. Also absent, without the brief cache, when the city has no
+                locations, since there is no centre to measure from.
 
     DestinationChild:
       type: object
@@ -472,3 +739,13 @@ components:
                     type: boolean
         priceRange:
           $ref: "#/components/schemas/PriceRange"
+        metaData:
+          type: object
+          description: Only on the `outside` section of a city page.
+          required:
+            - distance
+          properties:
+            distance:
+              type: integer
+              description: Distance from the city's centre in metres.
+              example: 16400
